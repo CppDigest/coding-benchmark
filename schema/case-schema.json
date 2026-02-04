@@ -1,0 +1,499 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cppalliance.org/benchmarks/case-schema/v0.1",
+  "title": "Coding Benchmark Case",
+  "description": "Schema for C/C++ coding benchmark cases (Clang, Boost CI, etc.)",
+  "version": "0.1.0",
+  "type": "object",
+  "required": [
+    "case_id",
+    "suite",
+    "repo_url",
+    "base_sha",
+    "prompt_markdown",
+    "evaluation_steps",
+    "gold_outcome",
+    "dataset_version"
+  ],
+  "properties": {
+    "case_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_-]+$",
+      "description": "Unique identifier for this case (lowercase, alphanumeric, hyphens, underscores)",
+      "examples": ["clang-issue-12345", "boost-ci-gcc-fail-001"]
+    },
+    "suite": {
+      "type": "string",
+      "enum": [
+        "ci-fix",
+        "issue-fix",
+        "feature-impl",
+        "refactor",
+        "retrieval",
+        "review",
+        "test-coverage"
+      ],
+      "description": "Benchmark suite category"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 200,
+      "description": "Human-readable case title"
+    },
+    "labels": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Tags for categorization (e.g., 'Sema', 'windows', 'gcc', 'cmake')",
+      "examples": [["Sema", "CodeGen"], ["windows", "msvc"], ["b2", "boost"]]
+    },
+    "difficulty": {
+      "type": "string",
+      "enum": ["easy", "medium", "hard", "expert"],
+      "description": "Difficulty level (can be computed from gold patch size, files touched, etc.)"
+    },
+    "repo_url": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://github\\.com/[^/]+/[^/]+$",
+      "description": "Primary repository URL (GitHub)",
+      "examples": ["https://github.com/llvm/llvm-project", "https://github.com/boostorg/boost"]
+    },
+    "base_sha": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$",
+      "description": "Git commit SHA (40-char hex) at which baseline fails",
+      "examples": ["a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0"]
+    },
+    "created_from": {
+      "type": "object",
+      "description": "Provenance: where this case came from",
+      "properties": {
+        "issue_id": {
+          "type": ["integer", "null"],
+          "description": "GitHub issue number"
+        },
+        "pr_id": {
+          "type": ["integer", "null"],
+          "description": "GitHub PR number"
+        },
+        "ci_run_id": {
+          "type": ["string", "null"],
+          "description": "GitHub Actions run ID"
+        },
+        "other": {
+          "type": "string",
+          "description": "Other provenance (e.g., 'manually authored', 'derived from paper X')"
+        }
+      }
+    },
+    "dataset_version": {
+      "type": "string",
+      "pattern": "^v\\d+\\.\\d+(\\.\\d+)?$",
+      "description": "Dataset version this case belongs to",
+      "examples": ["v0.1", "v1.0.0"]
+    },
+    "prompt_markdown": {
+      "type": "string",
+      "minLength": 50,
+      "description": "Task description/issue text in Markdown format (what agent sees)"
+    },
+    "context_hints": {
+      "type": "object",
+      "description": "Optional hints to guide agents (file pointers, commands, etc.)",
+      "properties": {
+        "key_files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Suggested files to examine",
+          "examples": [["lib/Sema/SemaExpr.cpp", "include/clang/Sema/Sema.h"]]
+        },
+        "commands": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Suggested commands for repro/testing",
+          "examples": [["ninja check-clang", "ctest --test-dir __build__"]]
+        },
+        "environment_notes": {
+          "type": "string",
+          "description": "Special environment requirements or notes"
+        }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "required": ["os"],
+      "description": "Required environment for reproducibility",
+      "properties": {
+        "os": {
+          "type": "string",
+          "enum": ["ubuntu-22.04", "ubuntu-24.04", "windows-2022", "macos-latest", "macos-13"],
+          "description": "Operating system (GitHub Actions runner names)"
+        },
+        "compiler": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["gcc", "clang", "msvc", "apple-clang"]
+            },
+            "version": {
+              "type": "string",
+              "examples": ["14", "20", "14.42"]
+            }
+          }
+        },
+        "build_system": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["cmake", "b2", "ninja", "make", "msbuild"]
+            },
+            "version": {
+              "type": "string"
+            }
+          }
+        },
+        "container_image": {
+          "type": "string",
+          "description": "Docker image for deterministic evaluation",
+          "examples": ["ghcr.io/cppalliance/clang-build:latest"]
+        },
+        "build_options": {
+          "type": "object",
+          "description": "Build configuration options (added per o3 validation feedback)",
+          "properties": {
+            "build_type": {
+              "type": "string",
+              "enum": ["Debug", "Release", "RelWithDebInfo", "MinSizeRel"],
+              "description": "CMake build type"
+            },
+            "compiler_flags": {
+              "type": "array",
+              "items": {"type": "string"},
+              "description": "Additional compiler flags required for reproduction",
+              "examples": [["-fsanitize=address", "-fno-omit-frame-pointer"]]
+            },
+            "linker_flags": {
+              "type": "array",
+              "items": {"type": "string"},
+              "description": "Additional linker flags"
+            },
+            "sanitizers": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": ["asan", "ubsan", "tsan", "msan", "lsan"]
+              },
+              "description": "Enabled sanitizers (address, undefined, thread, memory, leak)"
+            },
+            "cross_compile_target": {
+              "type": "string",
+              "description": "Cross-compilation target triple (e.g., arm64-apple-darwin)",
+              "examples": ["arm64-apple-darwin", "x86_64-w64-mingw32"]
+            },
+            "incremental_build_supported": {
+              "type": "boolean",
+              "description": "Whether incremental builds are allowed (vs clean builds)",
+              "default": false
+            }
+          }
+        }
+      }
+    },
+    "setup_steps": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Commands to set up environment (checkout, install deps, etc.)",
+      "examples": [
+        [
+          "git clone --depth 1 https://github.com/llvm/llvm-project.git",
+          "cd llvm-project && git checkout $BASE_SHA",
+          "cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release"
+        ]
+      ]
+    },
+    "repro_steps": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Commands that demonstrate baseline failure",
+      "examples": [["ninja check-clang-sema"]]
+    },
+    "evaluation_steps": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "description": "Commands that define success (MUST pass for case to be solved)",
+      "examples": [["ninja check-clang", "ctest --test-dir build"]]
+    },
+    "fail_to_pass": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Specific test names that MUST pass (were failing at baseline)",
+      "examples": [["Sema/expr-address-of.c", "CodeGen/arm-neon-intrinsics.c"]]
+    },
+    "pass_to_pass": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Specific tests that MUST remain passing (regression check)",
+      "examples": [["**/*"], ["check-clang-sema", "check-clang-codegen"]]
+    },
+    "constraints": {
+      "type": "object",
+      "description": "Allowed/forbidden edits and policy rules",
+      "properties": {
+        "allowed_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Glob patterns for paths that MAY be edited (if specified, restricts edits)",
+          "examples": [["lib/Sema/**", "include/clang/Sema/**", "test/Sema/**"]]
+        },
+        "forbidden_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Glob patterns for paths that MUST NOT be edited",
+          "examples": [[".github/workflows/**", "test/**", "CMakeLists.txt"]]
+        },
+        "time_budget_minutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 240,
+          "default": 60,
+          "description": "Maximum wall-clock time for agent to solve this case"
+        },
+        "max_iterations": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 10,
+          "description": "Maximum number of edit-test cycles allowed"
+        },
+        "network_policy": {
+          "type": "string",
+          "enum": ["allowed", "restricted", "forbidden"],
+          "default": "restricted",
+          "description": "Whether agent can access network during solving"
+        }
+      }
+    },
+    "multi_repo": {
+      "type": "object",
+      "description": "Multi-repository configuration (for cross-repo attribution cases)",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "workspace_repos": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Repo identifier (e.g., 'boost.asio', 'boost.capy')"
+              },
+              "url": {
+                "type": "string",
+                "format": "uri"
+              },
+              "sha": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{40}$"
+              },
+              "path": {
+                "type": "string",
+                "description": "Relative path in workspace (e.g., 'libs/asio')"
+              }
+            },
+            "required": ["name", "url", "sha"]
+          },
+          "description": "All repositories in the workspace build"
+        },
+        "primary_repo": {
+          "type": "string",
+          "description": "Name of repo where failure was observed"
+        },
+        "allowed_fix_repos": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Names of repos where fixes are allowed (for cross-repo cases)"
+        },
+        "attribution": {
+          "type": "object",
+          "description": "Ground truth attribution (for evaluation)",
+          "properties": {
+            "correct_repo": {
+              "type": "string",
+              "description": "Name of repo where fix should be applied"
+            },
+            "confidence": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100,
+              "description": "Human confidence in attribution (0-100%)"
+            },
+            "reasoning": {
+              "type": "string",
+              "description": "Why this attribution is correct"
+            }
+          }
+        }
+      }
+    },
+    "gold_outcome": {
+      "type": "object",
+      "required": ["type"],
+      "description": "Reference solution that proves case is solvable",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["merge_sha", "patch_file", "patch_inline"],
+          "description": "How gold solution is provided"
+        },
+        "merge_sha": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40}$",
+          "description": "Git SHA of merged PR (if type=merge_sha)"
+        },
+        "patch_file": {
+          "type": "string",
+          "description": "Path to .patch file (if type=patch_file)",
+          "examples": ["gold-solutions/clang-issue-12345.patch"]
+        },
+        "patch_inline": {
+          "type": "string",
+          "description": "Inline patch content (if type=patch_inline)"
+        },
+        "validation_proof": {
+          "type": "object",
+          "description": "Evidence that gold solution passes evaluation",
+          "properties": {
+            "log_file": {
+              "type": "string",
+              "description": "Path to test/build log showing success"
+            },
+            "verified_date": {
+              "type": "string",
+              "format": "date",
+              "description": "When gold was last verified"
+            },
+            "verified_by": {
+              "type": "string",
+              "description": "Who verified (username or 'automated')"
+            }
+          }
+        }
+      }
+    },
+    "scoring": {
+      "type": "object",
+      "description": "Suite-specific scoring parameters",
+      "properties": {
+        "primary_metric": {
+          "type": "string",
+          "enum": ["resolved", "coverage_delta", "recall@k", "precision@k", "mrr"],
+          "default": "resolved",
+          "description": "Main success metric for this case"
+        },
+        "penalties": {
+          "type": "object",
+          "description": "Point deductions for violations",
+          "properties": {
+            "protected_path_edit": {
+              "type": "integer",
+              "default": 20,
+              "description": "Points deducted per forbidden path edit"
+            },
+            "test_disabled": {
+              "type": "integer",
+              "default": 30,
+              "description": "Points deducted if tests are disabled/skipped"
+            },
+            "ci_workflow_edit": {
+              "type": "integer",
+              "default": 100,
+              "description": "Points deducted for CI workflow changes (usually instant fail)"
+            },
+            "assertion_weakening": {
+              "type": "integer",
+              "default": 15,
+              "description": "Points deducted per weakened assertion"
+            },
+            "excessive_diff_size": {
+              "type": "integer",
+              "default": 1,
+              "description": "Points per 100 lines over threshold"
+            }
+          }
+        },
+        "secondary_metrics": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Additional metrics to record (not used for primary score)",
+          "examples": [["build_warnings_delta", "diff_size_lines", "wall_clock_seconds"]]
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional metadata for tracking",
+      "properties": {
+        "created_date": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "last_updated": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "curator": {
+          "type": "string",
+          "description": "Person/team who created this case"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Internal notes about this case (not shown to agents)"
+        },
+        "flaky": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether this case has shown non-deterministic behavior"
+        },
+        "quarantined": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether this case is excluded from evaluation"
+        },
+        "quarantine_reason": {
+          "type": "string",
+          "description": "Why this case is quarantined"
+        }
+      }
+    }
+  }
+}
