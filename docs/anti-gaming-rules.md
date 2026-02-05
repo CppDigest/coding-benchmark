@@ -642,23 +642,34 @@ git diff $BASE_SHA HEAD -- '**/CMakeLists.txt' | \
 git diff $BASE_SHA HEAD -- '**/CMakeLists.txt' | \
   grep -E '^\-.*target_sources.*test' && echo "VIOLATION"
 
-# Python: Check if test count decreased
+# Python: Track test names, not just counts
 python3 <<EOF
 import subprocess
 import re
 
-# Baseline test count
+def extract_test_names(ctest_output):
+    """Extract test names from 'ctest -N' output."""
+    # CTest output format: "Test #123: test_name"
+    tests = set()
+    for match in re.finditer(r"Test\s+#\d+:\s+(\S+)", ctest_output):
+        tests.add(match.group(1))
+    return tests
+
+# Baseline test names
 subprocess.run(["git", "checkout", "$BASE_SHA"], capture_output=True)
 baseline_out = subprocess.run(["ctest", "-N"], capture_output=True, text=True)
-baseline_count = len(re.findall(r"Test #", baseline_out.stdout))
+baseline_tests = extract_test_names(baseline_out.stdout)
 
-# Solution test count
+# Solution test names
 subprocess.run(["git", "checkout", "$SOLUTION_SHA"], capture_output=True)
 solution_out = subprocess.run(["ctest", "-N"], capture_output=True, text=True)
-solution_count = len(re.findall(r"Test #", solution_out.stdout))
+solution_tests = extract_test_names(solution_out.stdout)
 
-if solution_count < baseline_count:
-    print(f"VIOLATION: Test count decreased {baseline_count} → {solution_count}")
+# Check for removed tests (catches evasion: deleting 2 tests + adding 2 trivial tests)
+removed_tests = baseline_tests - solution_tests
+if removed_tests:
+    print(f"VIOLATION: Tests removed: {sorted(removed_tests)}")
+    print(f"Baseline: {len(baseline_tests)} tests, Solution: {len(solution_tests)} tests")
 EOF
 ```
 
@@ -901,30 +912,50 @@ class ViolationDetector:
         # Find missing test content
         missing = set(baseline_hashes.keys()) - solution_hashes
         if missing:
+            # Check if content truly disappeared vs. was modified
             for hash_val in missing:
+                original_file = baseline_hashes[hash_val]
+                # Allow if file still exists (just modified)
+                if Path(original_file).exists():
+                    continue
+                # Flag only if content vanished without trace
                 self.violations.append({
                     "rule": 18,
                     "severity": "instant_fail",
-                    "file": baseline_hashes[hash_val],
+                    "file": original_file,
                     "message": "Test file content missing (possibly renamed to evade detection)"
                 })
 
     def check_test_registration(self):
         """Rule 19: Detect test registration removals in build scripts."""
-        result = subprocess.run(
-            ["git", "diff", self.base_sha, self.solution_sha, "--", "**/CMakeLists.txt"],
-            capture_output=True, text=True
-        )
+        import re
 
-        # Look for removed test registrations
-        patterns = [r"^\-.*add_test", r"^\-.*gtest_discover_tests", r"^\-.*catch_discover_tests"]
-        for pattern in patterns:
-            if re.search(pattern, result.stdout, re.MULTILINE):
-                self.violations.append({
-                    "rule": 19,
-                    "severity": "instant_fail",
-                    "message": f"Test registration removed: {pattern}"
-                })
+        def extract_test_names(ctest_output):
+            """Extract test names from 'ctest -N' output."""
+            tests = set()
+            for match in re.finditer(r"Test\s+#\d+:\s+(\S+)", ctest_output):
+                tests.add(match.group(1))
+            return tests
+
+        # Get baseline test names
+        subprocess.run(["git", "checkout", self.base_sha], capture_output=True)
+        baseline_out = subprocess.run(["ctest", "-N"], capture_output=True, text=True)
+        baseline_tests = extract_test_names(baseline_out.stdout)
+
+        # Get solution test names
+        subprocess.run(["git", "checkout", self.solution_sha], capture_output=True)
+        solution_out = subprocess.run(["ctest", "-N"], capture_output=True, text=True)
+        solution_tests = extract_test_names(solution_out.stdout)
+
+        # Track test names, not just counts (catches evasion: delete 2 + add 2 trivial = same count)
+        removed_tests = baseline_tests - solution_tests
+
+        if removed_tests:
+            self.violations.append({
+                "rule": 19,
+                "severity": "instant_fail",
+                "message": f"Tests removed: {sorted(removed_tests)} (Baseline: {len(baseline_tests)}, Solution: {len(solution_tests)})"
+            })
 
     def check_test_deletions(self):
         """Rule 1: Detect test file deletions."""

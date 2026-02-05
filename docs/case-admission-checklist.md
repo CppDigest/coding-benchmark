@@ -229,18 +229,24 @@ done
 
 **Protocol:**
 ```bash
-# Run 3 times in clean environments
-for i in {1..3}; do
-    # Fresh clone
-    rm -rf repo-test-$i
-    git clone $REPO_URL repo-test-$i
-    cd repo-test-$i
-    git checkout $BASE_SHA
+# Clone ONCE, copy 3 times to ensure identical state
+# (prevents repo state changes between runs)
+git clone $REPO_URL repo-baseline
+cd repo-baseline
+git checkout $BASE_SHA
+cd ..
 
-    # Run evaluation
-    run_evaluation > results-$i.txt
+# Run 3 times from identical copies
+for i in {1..3}; do
+    # Copy from frozen baseline
+    rm -rf repo-test-$i
+    cp -r repo-baseline repo-test-$i
+    cd repo-test-$i
+
+    # Run in isolated process with frozen time (prevents time-dependent flakiness)
+    faketime '2026-01-01 00:00:00' run_evaluation > ../results-$i.txt 2>&1
     EXITCODE=$?
-    echo "$EXITCODE" > exitcode-$i.txt
+    echo "$EXITCODE" > ../exitcode-$i.txt
     cd ..
 done
 
@@ -248,6 +254,10 @@ done
 diff results-1.txt results-2.txt
 diff results-2.txt results-3.txt
 diff exitcode-1.txt exitcode-2.txt
+
+# Optional: Test on different OS/architectures (recommended for cross-platform cases)
+# docker run --rm -v $(pwd)/repo-baseline:/work ubuntu:22.04 bash -c "cd /work && run_evaluation"
+# docker run --rm -v $(pwd)/repo-baseline:/work alpine:3.19 bash -c "cd /work && run_evaluation"
 ```
 
 **Pass Criteria:**
@@ -288,9 +298,20 @@ REQUIRED_VERSION=$case['environment']['compiler']['version']
 [[ "$ACTUAL_VERSION" =~ "$REQUIRED_VERSION" ]] || echo "WARN: Compiler version mismatch"
 
 # 4. Run in isolated container (recommended)
+# Capture WHICH tests fail, not just that evaluation fails
+run_evaluation > host_failures.txt 2>&1
 docker run --rm -v $(pwd):/work $case['environment']['container_image'] \
-    bash -c "cd /work && run_evaluation"
-# Compare container results with host results
+    bash -c "cd /work && run_evaluation" > container_failures.txt 2>&1
+
+# Compare failure patterns (same tests must fail in both environments)
+diff <(grep "FAILED:" host_failures.txt | sort) \
+     <(grep "FAILED:" container_failures.txt | sort)
+
+if [ $? -ne 0 ]; then
+    echo "REJECT: Different failures in different environments"
+    echo "Host failures may be due to actual bug, container failures may be due to missing dependencies"
+    exit 1
+fi
 ```
 
 **Pass Criteria:**
