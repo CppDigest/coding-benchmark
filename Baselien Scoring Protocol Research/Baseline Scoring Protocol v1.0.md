@@ -273,11 +273,15 @@ For each model evaluated, record:
 Use **Wilson score interval** (95% confidence) for resolved rate:
 
 ```
-p̃ = (x + z²/2) / (n + z²)
-CI = [p̃ - z√(p̃(1-p̃)/n), p̃ + z√(p̃(1-p̃)/n)]
+CI_lower = (p̂ + z²/2n − z√((p̂(1−p̂) + z²/4n)/n)) / (1 + z²/n)
+CI_upper = (p̂ + z²/2n + z√((p̂(1−p̂) + z²/4n)/n)) / (1 + z²/n)
 ```
 
-Where x = successes, n = attempts, z = 1.96
+Where:
+- p̂ = x/n (observed proportion)
+- x = number of successes (resolved tasks)
+- n = number of attempts (total tasks)
+- z = 1.96 (for 95% confidence)
 
 For Pass@k, use bootstrap confidence intervals (1000 resamples, 2.5th and 97.5th percentiles).
 
