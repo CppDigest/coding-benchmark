@@ -16,9 +16,11 @@ This document recommends AI models and coding agents for baseline evaluation on 
 | **2** | Gemini 3 Flash | 25-35% | $0.03 | Recommended |
 | **3** | DeepSeek V3.2 | 15-25% | $0.02 | Budget baseline |
 | **3** | Qwen3-Coder 72B | 15-25% | $0.02 | Open-source baseline |
-| **Agent** | Devin | 30-40% | $2.00/ACU | Agentic reference |
+| **Agent** | Devin | 30-40% | ~$3.00* | Agentic reference |
 | **Agent** | OpenHands + Opus | 30-40% | $0.50 | Open-source agent |
 | **Agent** | Aider + Sonnet | 20-30% | $0.15 | Interactive baseline |
+
+*\*Devin pricing is $2.00-2.25/ACU; typical task consumes ~1.5 ACUs. See [Devin section](#devin-cognition) for details.*
 
 ---
 
@@ -294,11 +296,13 @@ Full agent systems that can iterate autonomously. Essential for comparing agains
 
 ### Agent Costs (60 TU-equivalent runs)
 
-| Agent | Cost/Task | Total (60 runs) |
-|-------|-----------|-----------------|
-| Devin | $3.00 | $180 |
-| OpenHands + Opus | $0.50 | $30 |
-| Aider + Sonnet | $0.15 | $9 |
+| Agent | Cost/Task | Total (60 runs) | Notes |
+|-------|-----------|-----------------|-------|
+| Devin | ~$3.00 | ~$180 | ~1.5 ACUs/task @ $2.00/ACU |
+| OpenHands + Opus | $0.50 | $30 | Opus API cost |
+| Aider + Sonnet | $0.15 | $9 | Sonnet API cost |
+
+*Note: Devin uses Agent Compute Units (ACUs) at $2.00-2.25/ACU. Tasks typically consume 1-2.5 ACUs depending on complexity. The $3.00 estimate assumes ~1.5 ACUs for a typical C/C++ CI fix task.*
 
 ### Recommended Budget
 
