@@ -1,0 +1,35 @@
+# Recommended External Benchmarks for Secondary Validation
+
+To complement our internal evaluation suites, we propose running a shortlist of external benchmarks. These will serve as **secondary validation** to ensure our results are comparable to the state-of-the-art and to cover any gaps in our internal datasets. Below, we categorize the benchmarks into those we should adopt immediately, those worth adopting with modifications, and those not suitable (with rationale).
+
+## Adopt Now (High Priority)
+
+**1. SWE-Bench Multilingual (with C/C++ issues)** – *Adopt Now.*  
+*Rationale:* This benchmark provides real issue-fixing tasks across languages, including **C and C++** projects. It aligns directly with our *CI-fix* and *issue-fix* goals – for example, tasks where a C++ project’s tests are failing and need a code patch. The evaluation is rigorous (tests must pass) and the harness is ready-to-use. **Integration:** Use the official Docker harness to run our agent on these tasks. Start with the C/C++ subset to measure performance on Clang/LLVM workflows, then optionally evaluate other languages. This gives an immediate, defensible metric of how well our agent fixes real C++ bugs compared to known baselines.
+
+**2. Defects4C** – *Adopt Now.*  
+*Rationale:* Defects4C is a dedicated benchmark for **C/C++ bugs**, offering breadth in bug types (memory errors, logic bugs, etc.) with thorough test-based validation. Adopting it will directly demonstrate our agent’s effectiveness in the C/C++ domain, which is our focus. It’s essentially a C++ equivalent of the well-known Defects4J, lending credibility to our evaluation. **Integration:** Set up a harness to compile each buggy program and run its tests (the Defects4C authors provide scripts or Docker images for reproducibility). We might integrate this into our pipeline as a batch of individual test cases. This benchmark will serve as a **core secondary test suite** for C/C++ repair.
+
+## Adopt with Modifications (Secondary Priority)
+
+**3. BugSwarm (Filtered for C/C++ CI cases)** – *Adopt with Modifications.*  
+*Rationale:* BugSwarm’s real CI failure scenarios are highly valuable to ensure our agent can handle actual build/test failures in practice. It includes cases with compiler errors or failing tests that mimic Boost CI issues. However, running all of BugSwarm is expensive and many cases are not C++. **Integration:** Identify and extract a subset of BugSwarm artifacts that are C/C++ (or similar to our domain). For example, if there are CMake-based C++ library failures or cross-platform build issues, include those. We’ll need to allow our agent to access the build logs (within the container or via an interface) and apply fixes. Because of the complexity, treat this as a special evaluation run (not every commit, but as a periodic stress test). The modifications involve filtering and possibly simplifying the environment (we might recreate the failing scenario in our own Docker image to have more control).
+
+**4. SWE-PolyBench (500 Subset)** – *Adopt with Modifications.*  
+*Rationale:* PolyBench offers insight into the agent’s **long-horizon reasoning and tool use**. It evaluates how well the agent can navigate large codebases and identify relevant components, which is crucial for big C++ projects even though PolyBench itself lacks C++ tasks. It also introduces additional metrics (like file precision/recall) that can diagnose our agent’s efficiency. **Integration:** Run the 500-task subset to keep runtime reasonable. We may need to adjust the harness to log the agent’s navigation steps for analysis. Since our interest is primarily in agent behavior, we focus on those metrics and overall success rates, without over-emphasizing the absolute score (as the languages differ). If any tasks in the subset are analogous to C++ issues (e.g., complex logical bug in a large codebase), those can be highlighted. The modification here is mostly selective use and ensuring our infrastructure can handle the Docker images and tool dependencies.
+
+**5. MultiPL-E (C++ subset) and HumanEval** – *Adopt (Supplementary).*  
+*Rationale:* These coding challenges are not CI scenarios, but they are industry-standard benchmarks for coding ability. Running them as a **sanity check** ensures our model’s general coding performance is strong. If our agent can’t do well on these, it would indicate deep issues. Conversely, matching state-of-the-art on them yet failing on CI tasks would underscore the unique difficulty of CI-fix problems. **Integration:** Use an existing evaluation script to run **HumanEval (Python)** for pass@1 and pass@10 metrics. For **MultiPL-E**, run the C++ translated problems (and perhaps a few other languages relevant to us, like C or Java) to get a cross-language performance view. Only minimal modifications are needed (just environment setup for compiling and testing code in those languages). These results will be used in reports for comparison, rather than as core gating criteria in our pipeline.
+
+## Not Suitable / Low Priority
+
+**Benchmarks to defer or avoid**, either due to misalignment or redundancy:
+
+- **QuixBugs:** Too small and simplistic (40 toy bugs, and no C++ coverage). Modern models already solve most of these easily, so it won’t differentiate our agent’s abilities or provide new insight.
+- **CodeXGLUE Code Refinement:** Uses static pair comparisons for bug-fixes and evaluates via text similarity, not by running code. This doesn’t fit our execution-based evaluation approach and focuses on snippet-level changes, which our agent already surpasses.
+- **Defects4J / Bears (Java-only):** While useful for general validation, these overlap with the spirit of Defects4C and BugSwarm but in Java. Unless we extend our effort to Java, running them isn’t a priority. We can infer our agent’s likely performance in Java from the multi-language benchmarks we do include (and possibly run a few Defects4J cases if needed for a paper or to show multilingual capability).
+- **APPS / CodeContests:** These emphasize algorithmic coding challenges unrelated to maintaining existing codebases. They are time-consuming to run and analyze. We prefer to focus our resources on benchmarks that mirror software maintenance tasks. We might use a small subset for additional evidence of capability, but it’s not core to our validation of CI fixes.
+
+## Summary of Recommendations
+
+In summary, we recommend **integrating SWE-Bench Multilingual and Defects4C immediately** to validate C/C++ bug-fixing, using **BugSwarm** and **PolyBench** in a targeted way to test CI-specific and long-horizon reasoning skills, and including **HumanEval/MultiPL-E results** for general competency context. This combination will ensure our internal benchmark results are **both credible (externally comparable)** and **comprehensive (covering the unique challenges of C++ CI scenarios)**. By running these alongside our internal suites, we can confidently defend the strengths and identify weaknesses of our coding agent in the broader landscape.
