@@ -1,0 +1,153 @@
+#!/usr/bin/env python3
+"""
+Template: Generate benchmark test cases from mined issues and bug-fix pairs.
+
+Fill in:
+  - For Boost: map (repo, buggy_commit, fixed_commit) → build_cmd, test_cmd (B2 or CMake)
+  - For Clang: map (repo, buggy_commit, fixed_commit) → test_file, build_target (lit/ninja)
+  - Optional: parse Boost.Test or lit to find test targets; infer from diff of fix commit
+
+Input: JSONL from mine_github_issues and/or extract_bug_fixes (or combined).
+Output: JSONL matching dataset schema (see boost_plan.md / clang_plan.md).
+
+Usage (example after implementation):
+  python generate_test_cases.py.template --input candidates.jsonl --type boost --repo-path /path/to/boost --output boost_cases.jsonl
+  python generate_test_cases.py.template --input clang_pairs.jsonl --type clang --repo-path /path/to/llvm-project --output clang_cases.jsonl
+
+Requires: Git, optional B2/CMake/lit for inferring commands.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+
+# -----------------------------------------------------------------------------
+# Output schema (Boost): library, issue_id, buggy_commit, fixed_commit, test_cmd, build_cmd, ...
+# Output schema (Clang): component, bug_id, buggy_commit, fixed_commit, test_file, build_target, ...
+# -----------------------------------------------------------------------------
+
+
+def parse_args() -> argparse.Namespace:
+    p = argparse.ArgumentParser(description="Generate benchmark test cases from candidates.")
+    p.add_argument("--input", type=str, required=True, help="Input JSONL (candidates or pairs)")
+    p.add_argument("--type", type=str, required=True, choices=("boost", "clang"), help="Benchmark type")
+    p.add_argument("--repo-path", type=str, default=None, help="Path to repo (for inferring test/build commands)")
+    p.add_argument("--output", type=str, default="test_cases.jsonl", help="Output JSONL path")
+    p.add_argument("--library", type=str, default=None, help="Boost: library name (e.g. beast). Clang: ignored.")
+    p.add_argument("--component", type=str, default=None, help="Clang: component (e.g. sema). Boost: ignored.")
+    return p.parse_args()
+
+
+def load_input(path: str) -> list[dict]:
+    rows = []
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            rows.append(json.loads(line))
+    return rows
+
+
+def infer_boost_commands(repo_path: Path, buggy_commit: str, fixed_commit: str, library: str | None) -> dict | None:
+    """
+    Infer build_cmd and test_cmd for Boost.
+    Option 1: Heuristic from diff of fixed_commit (e.g. new/modified files under test/ → b2 target).
+    Option 2: Default per-library (e.g. b2 libs/beast/test/...).
+    Return dict with build_cmd, test_cmd or None if cannot infer.
+    """
+    # TODO: git show fixed_commit --name-only -- libs/<lib>/test/
+    #       Map to b2 target or ctest -R ...
+    return {
+        "build_cmd": f"cd $REPO && ./b2 -j4 libs/{library or 'beast'}/test/...",
+        "test_cmd": f"cd $REPO && ./b2 -j4 libs/{library or 'beast'}/test/...",
+    }
+
+
+def infer_clang_commands(repo_path: Path, buggy_commit: str, fixed_commit: str, component: str | None) -> dict | None:
+    """
+    Infer test_file and build_target for Clang.
+    Option 1: git diff fixed_commit^..fixed_commit --name-only -- clang/test/
+    Option 2: Map component to check-clang-* target (e.g. sema -> check-clang-sema).
+    Return dict with test_file, build_target or None.
+    """
+    # TODO: list new/modified tests; set build_target = check-clang-sema etc.
+    return {
+        "test_file": "clang/test/Sema/placeholder.cpp",  # replace with real path from diff
+        "build_target": f"check-clang-{component or 'sema'}",
+    }
+
+
+def row_to_boost_case(row: dict, repo_path: Path | None, library: str | None) -> dict | None:
+    """Convert input row to Boost schema. Requires buggy_commit, fixed_commit; optional issue_id, repo."""
+    buggy = row.get("buggy_commit") or row.get("base_commit")
+    fixed = row.get("fixed_commit")
+    if not buggy or not fixed:
+        return None
+    lib = library or row.get("library") or "unknown"
+    inferred = infer_boost_commands(repo_path or Path("."), buggy, fixed, lib) if repo_path else {}
+    return {
+        "library": lib,
+        "issue_id": str(row.get("issue_id", row.get("fixed_commit", ""))),
+        "buggy_commit": buggy,
+        "fixed_commit": fixed,
+        "test_cmd": inferred.get("test_cmd", ""),
+        "build_cmd": inferred.get("build_cmd", ""),
+        "repo": row.get("repo", ""),
+        "difficulty": row.get("difficulty", "medium"),
+        "lines_changed": row.get("lines_changed"),
+    }
+
+
+def row_to_clang_case(row: dict, repo_path: Path | None, component: str | None) -> dict | None:
+    """Convert input row to Clang schema."""
+    buggy = row.get("buggy_commit")
+    fixed = row.get("fixed_commit")
+    if not buggy or not fixed:
+        return None
+    comp = component or row.get("component") or "sema"
+    inferred = infer_clang_commands(repo_path or Path("."), buggy, fixed, comp) if repo_path else {}
+    return {
+        "component": comp,
+        "bug_id": str(row.get("bug_id", row.get("issue_id", row.get("fixed_commit", "")))),
+        "buggy_commit": buggy,
+        "fixed_commit": fixed,
+        "test_file": inferred.get("test_file", ""),
+        "build_target": inferred.get("build_target", ""),
+        "repo": row.get("repo", "llvm/llvm-project"),
+        "category": comp,
+    }
+
+
+def main() -> int:
+    args = parse_args()
+    rows = load_input(args.input)
+    repo_path = Path(args.repo_path) if args.repo_path else None
+    if repo_path and not (repo_path / ".git").exists():
+        print(f"Warning: not a git repo: {repo_path}", file=sys.stderr)
+        repo_path = None
+
+    cases = []
+    if args.type == "boost":
+        for r in rows:
+            c = row_to_boost_case(r, repo_path, args.library)
+            if c:
+                cases.append(c)
+    else:
+        for r in rows:
+            c = row_to_clang_case(r, repo_path, args.component)
+            if c:
+                cases.append(c)
+
+    with open(args.output, "w", encoding="utf-8") as f:
+        for c in cases:
+            f.write(json.dumps(c, ensure_ascii=False) + "\n")
+    print(f"Wrote {len(cases)} cases to {args.output}", file=sys.stderr)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
