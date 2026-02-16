@@ -15,6 +15,10 @@ __pycache__/
 dist/
 build/
 
+# Defects4C (Child Issue 2)
+external/defects4c/repos/
+external/defects4c/defects4c_upstream/
+
 # IDE / OS
 .idea/
 .vscode/
