@@ -86,8 +86,8 @@ def main() -> int:
                 "repo": args.repo,
                 "title": issue.get("title"),
                 "pr_number": linked.get("pr_number"),
-                "fix_commit": linked.get("fix_commit"),
-                "base_commit": linked.get("base_commit"),
+                "fixed_commit": linked.get("fix_commit"),
+                "buggy_commit": linked.get("base_commit"),
             })
     out = args.output
     with open(out, "w", encoding="utf-8") as f:

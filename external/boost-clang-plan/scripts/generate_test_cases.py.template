@@ -103,8 +103,8 @@ def row_to_boost_case(row: dict, repo_path: Path | None, library: str | None) ->
 
 
 def row_to_clang_case(row: dict, repo_path: Path | None, component: str | None) -> dict | None:
-    """Convert input row to Clang schema."""
-    buggy = row.get("buggy_commit")
+    """Convert input row to Clang schema. Uses base_commit when buggy_commit is missing (e.g. from mine_github_issues)."""
+    buggy = row.get("buggy_commit") or row.get("base_commit")
     fixed = row.get("fixed_commit")
     if not buggy or not fixed:
         return None

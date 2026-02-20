@@ -73,7 +73,7 @@ for i in issues:
 **Example:**
 
 ```bash
-git log --oneline --grep="Fix" --grep="Fixes" --all-match -- libs/beast/
+git log --oneline --grep="Fix" -- libs/beast/
 git show <commit>^:libs/beast/test/...
 ```
 
