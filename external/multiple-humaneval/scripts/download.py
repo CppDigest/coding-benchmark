@@ -25,8 +25,7 @@ def to_record(record: dict, task_id_key: str = "task_id", prompt_key: str = "pro
     prompt = record.get(prompt_key) or ""
     tests = record.get(test_key) or record.get("tests") or ""
     canonical = record.get(canonical_key) or record.get("canonical_solution") or ""
-    if hasattr(task_id, "tolist"):
-        task_id = str(task_id) if not hasattr(task_id, "tolist") else task_id
+    task_id = str(task_id.tolist()) if hasattr(task_id, "tolist") else str(task_id)
     if hasattr(prompt, "tolist"):
         prompt = str(prompt)
     if hasattr(tests, "tolist"):
@@ -81,7 +80,7 @@ def main() -> int:
     py_records = []
     for i in range(len(ds_py)):
         row = ds_py[i]
-        r = to_record(dict(ds_py[i]))
+        r = to_record(dict(row))
         py_records.append(r)
     py_path = out_dir / "humaneval_python.jsonl"
     with open(py_path, "w", encoding="utf-8") as f:

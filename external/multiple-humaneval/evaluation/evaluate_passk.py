@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import subprocess
 import sys
 from pathlib import Path
@@ -36,9 +37,12 @@ def load_dataset(path: Path) -> dict[str, dict]:
 
 def run_sandbox_one(prompt: str, solution: str, tests: str, task_id: str, docker: bool = True) -> bool:
     payload = {"task_id": task_id, "prompt": prompt, "solution": solution, "tests": tests}
+    script_dir = Path(__file__).resolve().parent
+    sandbox_dir = script_dir / "sandbox"
+    execute_py = sandbox_dir / "execute.py"
+    timeout_sec = 60
+
     if docker:
-        script_dir = Path(__file__).resolve().parent
-        sandbox_dir = script_dir / "sandbox"
         try:
             r = subprocess.run(
                 ["docker", "run", "--rm", "--network", "none",
@@ -47,7 +51,7 @@ def run_sandbox_one(prompt: str, solution: str, tests: str, task_id: str, docker
                 input=json.dumps(payload),
                 capture_output=True,
                 text=True,
-                timeout=60,
+                timeout=timeout_sec,
                 cwd=sandbox_dir,
             )
         except (FileNotFoundError, subprocess.TimeoutExpired):
@@ -59,7 +63,26 @@ def run_sandbox_one(prompt: str, solution: str, tests: str, task_id: str, docker
             return res.get("pass", False)
         except Exception:
             return False
-    return False
+
+    # Local path: run execute.py via subprocess
+    try:
+        r = subprocess.run(
+            [sys.executable, str(execute_py)],
+            input=json.dumps(payload),
+            capture_output=True,
+            text=True,
+            timeout=timeout_sec,
+            cwd=sandbox_dir,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return False
+    if r.returncode != 0:
+        return False
+    try:
+        res = json.loads(r.stdout or r.stderr or "{}")
+        return res.get("pass", False)
+    except Exception:
+        return False
 
 
 def main() -> int:
@@ -132,31 +155,47 @@ def main() -> int:
         print(f"Dry run: {len(data)} problems, {n} tasks with completions, k={ks}", file=sys.stderr)
         return 0
 
-    # Evaluate each task: for each k, pass@k = 1 if any of first k solutions passes
-    results = {}
+    # Evaluate each task: run all solutions up to max_k, record pass/fail per solution (no early break)
+    results: dict[str, list[bool]] = {}
     for tid, problem in data.items():
         prompt = problem.get("prompt", "")
         tests = problem.get("tests", "")
         sols = completions_by_task.get(tid, [])
-        passed_any = False
+        passes = []
         for sol in sols[:max_k]:
-            if run_sandbox_one(prompt, sol, tests, tid, docker=not args.no_docker):
-                passed_any = True
-                break
-        results[tid] = passed_any
+            passes.append(run_sandbox_one(prompt, sol, tests, tid, docker=not args.no_docker))
+        results[tid] = passes
 
     n_total = len(results)
-    n_pass = sum(1 for v in results.values() if v)
-    pass_at_1 = n_pass / n_total if n_total else 0.0
-    # pass@10 and pass@100 would need multiple samples per task; here we only have one run per task (first solution that passes)
-    metrics = {"pass@1": pass_at_1, "resolved": n_pass, "total": n_total}
+    # pass@1: proportion of tasks where first solution passed (tasks with at least 1 sample)
+    n_pass_1 = sum(1 for passes in results.values() if passes and passes[0])
+    n_with_samples = sum(1 for passes in results.values() if passes)
+    pass_at_1 = n_pass_1 / n_with_samples if n_with_samples else 0.0
+    resolved = sum(1 for passes in results.values() if passes and any(passes))
+
+    metrics: dict[str, float | int | None] = {"pass@1": pass_at_1, "resolved": resolved, "total": n_total}
     for k in ks:
-        if k > 1:
-            metrics[f"pass@{k}"] = pass_at_1  # placeholder unless we have k samples per task
+        if k == 1:
+            continue
+        # Unbiased pass@k: 1 - C(n-c,k)/C(n,k) per task, mean over tasks with n>=k
+        total_contrib = 0.0
+        count = 0
+        for passes in results.values():
+            n = len(passes)
+            if n < k:
+                continue
+            c = sum(passes)
+            # 1 - C(n-c, k) / C(n, k); C(n-c, k) = 0 when n-c < k
+            if n - c < k:
+                total_contrib += 1.0
+            else:
+                total_contrib += 1.0 - (math.comb(n - c, k) / math.comb(n, k))
+            count += 1
+        metrics[f"pass@{k}"] = total_contrib / count if count else None
     out_file = args.result_dir / "evaluate_passk.json"
     with open(out_file, "w", encoding="utf-8") as f:
         json.dump(metrics, f, indent=2)
-    print(f"pass@1={pass_at_1:.4f} resolved={n_pass}/{n_total}", file=sys.stderr)
+    print(f"pass@1={pass_at_1:.4f} resolved={resolved}/{n_total}", file=sys.stderr)
     print(f"Wrote {out_file}", file=sys.stderr)
     return 0
 

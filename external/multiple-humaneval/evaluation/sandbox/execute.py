@@ -8,7 +8,6 @@ Designed to run inside Docker with network disabled.
 from __future__ import annotations
 
 import json
-import os
 import subprocess
 import sys
 import tempfile
@@ -22,14 +21,14 @@ def main() -> None:
     try:
         inp = json.load(sys.stdin)
     except Exception as e:
-        print(json.dumps({"status": "RuntimeError", "stderr": str(e), "pass": False}))
+        print(json.dumps({"status": "RuntimeError", "task_id": "unknown", "stderr": str(e), "pass": False}))
         sys.exit(1)
     prompt = inp.get("prompt", "")
     solution = inp.get("solution", inp.get("canonical_solution", ""))
     tests = inp.get("tests", "")
     task_id = inp.get("task_id", "unknown")
     if not prompt and not solution:
-        print(json.dumps({"status": "RuntimeError", "stderr": "missing prompt/solution", "pass": False}))
+        print(json.dumps({"status": "RuntimeError", "task_id": task_id, "stderr": "missing prompt/solution", "pass": False}))
         sys.exit(1)
     full_code = (prompt + "\n" + solution + "\n" + tests).strip()
     with tempfile.TemporaryDirectory(prefix="cpp_") as d:
@@ -45,11 +44,12 @@ def main() -> None:
                 cwd=d,
             )
         except subprocess.TimeoutExpired:
-            print(json.dumps({"status": "CompileError", "stderr": "compile timeout", "pass": False}))
+            print(json.dumps({"status": "CompileError", "task_id": task_id, "stderr": "compile timeout", "pass": False}))
             sys.exit(0)
         if r.returncode != 0:
             print(json.dumps({
                 "status": "CompileError",
+                "task_id": task_id,
                 "stdout": r.stdout or "",
                 "stderr": r.stderr or "",
                 "pass": False,
@@ -64,11 +64,12 @@ def main() -> None:
                 cwd=d,
             )
         except subprocess.TimeoutExpired:
-            print(json.dumps({"status": "Timeout", "stderr": "execution timeout", "pass": False}))
+            print(json.dumps({"status": "Timeout", "task_id": task_id, "stderr": "execution timeout", "pass": False}))
             sys.exit(0)
         passed = run_r.returncode == 0
         print(json.dumps({
             "status": "OK" if passed else "RuntimeError",
+            "task_id": task_id,
             "stdout": run_r.stdout or "",
             "stderr": run_r.stderr or "",
             "pass": passed,
