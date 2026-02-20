@@ -27,7 +27,7 @@ def main() -> int:
                 errors.append("artifact_count != len(artifacts)")
             else:
                 for i, a in enumerate(catalog["artifacts"]):
-                    for key in ("image_tag", "repo", "fail_commit", "pass_commit"):
+                    for key in ("image_tag", "repo", "fail_commit", "pass_commit", "fail_log_path"):
                         if key not in a:
                             errors.append(f"artifacts[{i}] missing '{key}'")
         except json.JSONDecodeError as e:

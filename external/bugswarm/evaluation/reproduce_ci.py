@@ -18,6 +18,8 @@ import subprocess
 import sys
 
 DEFAULT_IMAGE_REPO = "bugswarm/cached-images"
+# Max time for docker run (CI reproduce can be long; 1 hour)
+TIMEOUT_SECONDS = 3600
 
 
 def main() -> int:
@@ -70,8 +72,11 @@ def main() -> int:
     cmd.extend([image, "bash", script_name])
 
     try:
-        rc = subprocess.run(cmd, check=False).returncode
+        rc = subprocess.run(cmd, check=False, timeout=TIMEOUT_SECONDS).returncode
         return rc
+    except subprocess.TimeoutExpired:
+        print(f"Reproduce job timed out after {TIMEOUT_SECONDS}s.", file=sys.stderr)
+        return 124
     except FileNotFoundError:
         print("Docker not found. Install Docker and ensure 'docker' is on PATH.", file=sys.stderr)
         return 1

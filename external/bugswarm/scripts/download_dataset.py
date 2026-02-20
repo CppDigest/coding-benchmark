@@ -54,8 +54,11 @@ def main() -> int:
         print("Install bugswarm-common: pip install bugswarm-common", file=sys.stderr)
         return 1
 
-    token = args.token or None
-    api = DatabaseAPI(token=token)
+    token = (args.token or "").strip()
+    if token:
+        api = DatabaseAPI(token=token)
+    else:
+        api = DatabaseAPI()  # unauthenticated (rate limited)
 
     # 1. Fetch full dataset (all reproducible artifacts)
     print("Fetching full BugSwarm artifact list (reproduce_successes > 0)...", file=sys.stderr)
@@ -69,7 +72,7 @@ def main() -> int:
     # 2. Write full dataset (normalized) to data/full_artifacts.json
     full_path = bugswarm_root / "data" / "full_artifacts.json"
     full_path.parent.mkdir(parents=True, exist_ok=True)
-    full_list = [normalize_artifact(a) for a in all_artifacts]
+    full_list = [normalize_artifact(a, api) for a in all_artifacts]
     full_list.sort(key=lambda x: (x.get("repo", ""), x.get("image_tag", "")))
     with open(full_path, "w", encoding="utf-8") as f:
         json.dump({
@@ -83,7 +86,7 @@ def main() -> int:
     def is_cpp(a: dict) -> bool:
         lang = (a.get("lang") or "").strip()
         build = (a.get("build_system") or "").strip().lower()
-        if lang.upper() in ("C", "C++", "C/C++") or (lang and "c++" in lang.lower()) or (lang and lang.upper() == "C"):
+        if lang and (lang.upper() in ("C", "C++", "C/C++") or "c++" in lang.lower()):
             return True
         if args.include_build_system and build in ("cmake", "makefile", "make"):
             return True
@@ -98,7 +101,7 @@ def main() -> int:
         if not image_tag or image_tag in seen:
             continue
         seen.add(image_tag)
-        artifacts.append(normalize_artifact(a))
+        artifacts.append(normalize_artifact(a, api))
 
     artifacts.sort(key=lambda x: (x.get("repo", ""), x.get("image_tag", "")))
 
@@ -121,12 +124,28 @@ def main() -> int:
     return 0
 
 
-def normalize_artifact(raw: dict) -> dict:
+def get_failure_log_path(api, failed_job_id: str) -> str:
+    """Return failure log URL/path for a job via API get_build_log, or canonical BugSwarm log URL."""
+    job_id = (failed_job_id or "").strip()
+    if not job_id:
+        return ""
+    try:
+        resp = api.get_build_log(job_id)
+        if getattr(resp, "ok", False) and getattr(resp, "url", None):
+            return resp.url
+        # Fallback: canonical BugSwarm log URL
+        return f"https://www.bugswarm.org/artifact-logs/{job_id}/"
+    except Exception:
+        return f"https://www.bugswarm.org/artifact-logs/{job_id}/"
+
+
+def normalize_artifact(raw: dict, api) -> dict:
     """Produce a single artifact entry with required fields for our harness."""
     failed = raw.get("failed_job") or {}
     passed = raw.get("passed_job") or {}
     image_tag = (raw.get("image_tag") or raw.get("current_image_tag") or "").strip()
     repo = (raw.get("repo") or "").strip()
+    failed_job_id = str(failed.get("job_id") or "")
     return {
         "image_tag": image_tag,
         "repo": repo,
@@ -134,9 +153,9 @@ def normalize_artifact(raw: dict) -> dict:
         "build_system": raw.get("build_system") or "NA",
         "fail_commit": failed.get("trigger_sha") or failed.get("base_sha") or "",
         "pass_commit": passed.get("trigger_sha") or passed.get("base_sha") or "",
-        "failed_job_id": str(failed.get("job_id") or ""),
+        "failed_job_id": failed_job_id,
         "passed_job_id": str(passed.get("job_id") or ""),
-        "fail_log_path": "",  # build log from API: get_build_log(failed_job_id)
+        "fail_log_path": get_failure_log_path(api, failed_job_id),
         "reproduce_successes": raw.get("reproduce_successes"),
         "reproducibility_status": (raw.get("reproducibility_status") or {}).get("status"),
         "ci_service": raw.get("ci_service") or "travis",
