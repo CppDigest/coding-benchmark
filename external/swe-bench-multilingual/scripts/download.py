@@ -5,7 +5,7 @@ Requires: pip install datasets huggingface_hub pyarrow
 import argparse
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 from datasets import load_dataset
 
@@ -36,7 +36,7 @@ def main():
     manifest = {
         "dataset_id": DATASET_ID,
         "revision": args.revision,
-        "downloaded_at_utc": datetime.utcnow().isoformat() + "Z",
+        "downloaded_at_utc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "splits": list(dataset.keys()),
     }
 

@@ -46,6 +46,14 @@ def load_predictions(pred_path: str) -> list[dict]:
     return preds
 
 
+def normalize_patch(patch: str) -> str:
+    """Normalize patch for comparison: line endings and trailing whitespace per line."""
+    if not patch:
+        return ""
+    text = patch.replace("\r\n", "\n").replace("\r", "\n").strip()
+    return "\n".join(line.rstrip() for line in text.splitlines()).strip()
+
+
 def run_standalone_evaluation(
     predictions_path: str,
     cpp_issues_path: str,
@@ -53,8 +61,10 @@ def run_standalone_evaluation(
 ) -> dict:
     """
     Validate predictions and produce a results JSON with pass/fail-style metrics.
-    Does not run tests; treats each prediction as "submitted" and "resolved" only
-    if the patch is non-empty and instance_id is in the dataset.
+    Standalone mode: compares model_patch to gold_patch after normalization (line
+    endings, trailing whitespace). resolved = True only when the normalized patches
+    match. For execution-based evaluation use --harness with the official SWE-bench
+    harness when available.
     """
     issues = load_cpp_issues(cpp_issues_path)
     preds = load_predictions(predictions_path)
@@ -68,17 +78,26 @@ def run_standalone_evaluation(
             instance_results.append({
                 "instance_id": iid,
                 "resolved": False,
+                "patch_submitted": bool(patch.strip()),
                 "error": "instance_id not in C/C++ dataset",
             })
             continue
-        # Standalone: we only check presence of a non-empty patch; real resolution requires the full harness
+        rec = issues[iid]
+        gold = (rec.get("gold_patch") or "").strip()
         has_patch = bool(patch.strip())
+        # Resolved only if we have a gold patch to compare and normalized patches match
+        if not gold:
+            is_resolved = False
+        else:
+            is_resolved = has_patch and (
+                normalize_patch(patch) == normalize_patch(gold)
+            )
         instance_results.append({
             "instance_id": iid,
-            "resolved": has_patch,
+            "resolved": is_resolved,
             "patch_submitted": has_patch,
         })
-        if has_patch:
+        if is_resolved:
             resolved += 1
 
     results = {

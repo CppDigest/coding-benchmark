@@ -71,7 +71,7 @@ Then install dependencies:
 pip install --upgrade pip
 pip install -r external/swe-bench-multilingual/requirements.txt
 # Or explicitly:
-# pip install datasets huggingface_hub pyarrow tqdm
+# pip install datasets huggingface_hub pyarrow
 ```
 
 **Linux / macOS**
@@ -111,7 +111,7 @@ After setup, run scripts with the venv activated so that `python` and `pip` refe
 ### Environment assumptions
 
 - **Python:** 3.10+.
-- **Dependencies:** `datasets`, `huggingface_hub`, `pyarrow`, `tqdm` (see `requirements.txt` in this repo).
+- **Dependencies:** `datasets`, `huggingface_hub`, `pyarrow` (see `requirements.txt` in this repo).
 - **OS:** Instructions are written for Windows (PowerShell); the script itself is cross-platform.
 - **Network:** One-time download from Hugging Face; no manual clicking once the revision is chosen and the script is run.
 

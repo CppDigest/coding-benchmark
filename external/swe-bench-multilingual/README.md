@@ -13,12 +13,12 @@ python -m venv .venv
 pip install --upgrade pip
 pip install -r external/swe-bench-multilingual/requirements.txt
 
-# 2. Download dataset (revision pinned in docs/methodology.md)
-python external\swe-bench-multilingual\scripts\download.py --revision 2b7aced941b4873e9cad3e76abbae93f481d1beb
+# 2. Download dataset (revision pinned in docs/dataset_version.md)
+python external/swe-bench-multilingual/scripts/download.py --revision 2b7aced941b4873e9cad3e76abbae93f481d1beb
 
 # 3. (Optional) Filter to C/C++ and run evaluation
-python external\swe-bench-multilingual\scripts\filter_cpp.py
-python external\swe-bench-multilingual\evaluation\run_evaluation.py --predictions_path <path> --output_dir <dir>
+python external/swe-bench-multilingual/scripts/filter_cpp.py
+python external/swe-bench-multilingual/evaluation/run_evaluation.py --predictions_path <path> --output_dir <dir>
 ```
 
 Output: `external/swe-bench-multilingual/data/raw/manifest.json` and parquet split(s); C/C++ subset in `data/cpp_issues.jsonl` after step 3.
@@ -37,7 +37,7 @@ Output: `external/swe-bench-multilingual/data/raw/manifest.json` and parquet spl
 
 ## Pinning a different revision
 
-See **Dataset version pinning** in [docs/methodology.md](docs/methodology.md). Then run:
+See **Dataset version pinning** in [docs/dataset_version.md](docs/dataset_version.md). Then run:
 ```powershell
-python external\swe-bench-multilingual\scripts\download.py --revision <commit_hash>
+python external/swe-bench-multilingual/scripts/download.py --revision <commit_hash>
 ```

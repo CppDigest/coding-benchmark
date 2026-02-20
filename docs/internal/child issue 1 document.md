@@ -1,4 +1,4 @@
-"# Child Issue 1 – SWE-Bench Multilingual (C/C++ Subset)
+# Child Issue 1 – SWE-Bench Multilingual (C/C++ Subset)
 
 Dataset Acquisition + Documentation Guide (Windows)
 
@@ -139,8 +139,8 @@ for split_name, split_data in dataset.items():
 print(\"Download complete.\")
 print(\"Manifest saved at:\", manifest_path)
 
-if name == "main":
-main()
+if __name__ == "__main__":
+    main()
 
 SECTION 5 — Execute Download
 
@@ -152,8 +152,6 @@ Expected output:
 
 external\swe-bench-multilingual\data\raw\
 manifest.json
-train.parquet
-dev.parquet
 test.parquet
 
 Manifest.json contains:

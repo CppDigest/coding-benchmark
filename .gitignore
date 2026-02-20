@@ -19,6 +19,13 @@ build/
 evaluation_results/
 external/swe-bench-multilingual/evaluation/out/
 
+# Raw data (large/binary) — generated splits and filtered artifacts
+data/raw/*.parquet
+data/raw/**/*.parquet
+data/cpp_issues.jsonl
+external/swe-bench-multilingual/data/raw/*.parquet
+external/swe-bench-multilingual/data/cpp_issues.jsonl
+
 # IDE / OS
 .idea/
 .vscode/

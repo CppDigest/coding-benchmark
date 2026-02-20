@@ -59,7 +59,7 @@ def main():
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
     rows = []
-    for name in os.listdir(raw_dir):
+    for name in sorted(os.listdir(raw_dir)):
         if not name.endswith(".parquet"):
             continue
         path = os.path.join(raw_dir, name)
@@ -87,14 +87,16 @@ def main():
             else:
                 issue_text = problem
 
-            fail_list = None
+            fail_list = []
             if fail_to_pass is not None:
                 f = fail_to_pass[i]
-                fail_list = f.as_py() if hasattr(f, "as_py") else (list(f) if f is not None else [])
-            pass_list = None
+                if f is not None and hasattr(f, "as_py"):
+                    fail_list = f.as_py() or []
+            pass_list = []
             if pass_to_pass is not None:
                 p = pass_to_pass[i]
-                pass_list = p.as_py() if hasattr(p, "as_py") else (list(p) if p is not None else [])
+                if p is not None and hasattr(p, "as_py"):
+                    pass_list = p.as_py() or []
 
             test_command = (
                 "Run the repository test suite. "
