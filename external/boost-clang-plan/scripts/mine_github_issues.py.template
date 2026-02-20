@@ -1,0 +1,101 @@
+#!/usr/bin/env python3
+"""
+Template: Mine GitHub issues for benchmark candidates (Boost-style repos).
+
+Fill in:
+  - GITHUB_ORG/REPO or read from config/CLI
+  - LABELS (e.g. ["bug"])
+  - Logic to link issues to merged PRs and extract commit SHAs
+  - Output schema (CSV/JSONL) with at least: issue_id, repo, pr_number, fix_commit, base_commit
+
+Usage (example after implementation):
+  python mine_github_issues.py.template --repo boostorg/beast --labels bug --output candidates.jsonl
+  python mine_github_issues.py.template --config repos.yaml --output candidates.jsonl
+
+Requires: PyGithub or requests, Git (optional for resolving commits).
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+
+# Optional: use PyGithub for richer API access
+# import github
+# from github import Github
+
+# -----------------------------------------------------------------------------
+# Placeholders: set or read from env/config
+# -----------------------------------------------------------------------------
+GITHUB_ORG = os.environ.get("GITHUB_ORG", "boostorg")
+DEFAULT_REPO = os.environ.get("GITHUB_REPO", "beast")  # or "boost" for super-project
+LABELS = ["bug"]  # labels to filter closed issues
+STATE = "closed"
+MAX_ISSUES = 500  # cap per repo
+
+# -----------------------------------------------------------------------------
+# Output schema (one JSON object per line for JSONL)
+# -----------------------------------------------------------------------------
+# Required for downstream: issue_id, repo, pr_number (if any), fix_commit, base_commit (buggy)
+# Optional: title, body_excerpt, closed_at, labels
+
+
+def parse_args() -> argparse.Namespace:
+    p = argparse.ArgumentParser(description="Mine GitHub issues for benchmark candidates.")
+    p.add_argument("--repo", type=str, default=f"{GITHUB_ORG}/{DEFAULT_REPO}", help="org/repo")
+    p.add_argument("--labels", type=str, nargs="*", default=LABELS, help="Issue labels (e.g. bug)")
+    p.add_argument("--state", type=str, default=STATE, choices=("open", "closed", "all"))
+    p.add_argument("--max-issues", type=int, default=MAX_ISSUES, help="Max issues to fetch per repo")
+    p.add_argument("--output", type=str, default="candidates_github.jsonl", help="Output JSONL path")
+    p.add_argument("--token", type=str, default=os.environ.get("GITHUB_TOKEN"), help="GitHub token (optional)")
+    return p.parse_args()
+
+
+def fetch_issues(repo: str, labels: list[str], state: str, max_issues: int, token: str | None) -> list[dict]:
+    """
+    Fetch closed issues with given labels.
+    Replace with real implementation: PyGithub repo.get_issues(state=..., labels=...).
+    """
+    # TODO: use PyGithub or requests to GET /repos/{owner}/{repo}/issues
+    #       params: state=state, labels=','.join(labels), per_page=100, page=...
+    #       For each issue, get timeline or linked PRs to find merge_commit_sha and base (buggy) commit
+    return []
+
+
+def link_pr_and_commits(issue: dict, repo_full_name: str, token: str | None) -> dict | None:
+    """
+    For an issue, find a merged PR that fixes it (e.g. "Fixes #N" in body).
+    Return dict with fix_commit (merge commit or HEAD of PR branch) and base_commit (base of PR, or parent of fix).
+    Return None if no clear PR or commits.
+    """
+    # TODO: get issue timeline or events; find closed PR; get pr.merge_commit_sha, pr.base.sha
+    return None
+
+
+def main() -> int:
+    args = parse_args()
+    issues = fetch_issues(args.repo, args.labels, args.state, args.max_issues, args.token)
+    rows = []
+    for issue in issues:
+        linked = link_pr_and_commits(issue, args.repo, args.token)
+        if linked:
+            rows.append({
+                "issue_id": issue.get("number"),
+                "repo": args.repo,
+                "title": issue.get("title"),
+                "pr_number": linked.get("pr_number"),
+                "fixed_commit": linked.get("fix_commit"),
+                "buggy_commit": linked.get("base_commit"),
+            })
+    out = args.output
+    with open(out, "w", encoding="utf-8") as f:
+        for r in rows:
+            f.write(json.dumps(r, ensure_ascii=False) + "\n")
+    print(f"Wrote {len(rows)} candidates to {out}", file=sys.stderr)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
