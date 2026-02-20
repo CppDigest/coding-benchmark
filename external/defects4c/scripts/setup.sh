@@ -24,7 +24,8 @@ fi
 mkdir -p "$DATA_DIR"
 mkdir -p "$REPO_DIR"
 
-# Fetch full dataset from upstream (same pattern as SWE-Bench: download then use)
+# Fetch full dataset from upstream (same pattern as SWE-Bench: download then use).
+# bug_catalog.json is generated here and not committed; it is in .gitignore.
 if command -v python3 &>/dev/null; then
   DOWNLOAD_SCRIPT="$SCRIPT_DIR/download_dataset.py"
   if [ -f "$DOWNLOAD_SCRIPT" ]; then
@@ -34,7 +35,8 @@ if command -v python3 &>/dev/null; then
 fi
 
 if [ ! -f "$DATA_DIR/bug_catalog.json" ] || [ ! -s "$DATA_DIR/bug_catalog.json" ]; then
-  echo "Warning: bug_catalog.json missing or empty. Run: python scripts/download_dataset.py"
+  echo "Error: bug_catalog.json missing or empty after setup. Run from external/defects4c: python scripts/download_dataset.py"
+  exit 1
 fi
 
 echo "Setup complete. Next: python scripts/checkout_bug.py --bug-id PROJECT@SHA"

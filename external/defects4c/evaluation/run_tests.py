@@ -4,6 +4,8 @@ Run tests for a Defects4C bug.
 Usage: python run_tests.py --bug-id PROJECT@SHA [--work-dir DIR] [--build-first]
 Uses test_cmd from bug_catalog.json; if empty, tries default (make check / ctest).
 """
+from __future__ import annotations
+
 import argparse
 import json
 import os
@@ -43,7 +45,8 @@ def main():
     bug = find_bug(catalog, args.bug_id)
     if not bug and "@" in args.bug_id:
         project = args.bug_id.split("@", 1)[0]
-        bug = {"bug_id": args.bug_id, "project": project, "test_cmd": "make check", "build_cmd": "./configure && make"}
+        # No build_cmd default; catalog or user must provide. test_cmd fallback is best-effort.
+        bug = {"bug_id": args.bug_id, "project": project, "test_cmd": "make check", "build_cmd": ""}
     if not bug:
         print(f"Bug not found: {args.bug_id}", file=sys.stderr)
         sys.exit(1)

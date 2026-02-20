@@ -4,6 +4,8 @@ Fetch full Defects4C dataset from upstream GitHub (same pattern as SWE-Bench Chi
 Downloads cve.list.csv and per-project bugs_list_new.json, builds data/bug_catalog.json.
 Run from external/defects4c or repo root. Requires: requests (pip install requests).
 """
+from __future__ import annotations
+
 import csv
 import json
 import os
@@ -56,6 +58,28 @@ def project_from_github_url(url: str) -> str | None:
     return None
 
 
+def get_parent_commit(project: str, sha: str) -> str | None:
+    """Resolve buggy (parent) commit for a CVE fix SHA via GitHub API. project = owner___repo.
+    Set GITHUB_TOKEN env for higher rate limit when processing many CVE entries."""
+    repo_path = project.replace("___", "/", 1)
+    url = f"https://api.github.com/repos/{repo_path}/commits/{sha}"
+    headers = {"Accept": "application/vnd.github.v3+json"}
+    token = os.environ.get("GITHUB_TOKEN", "").strip()
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    try:
+        r = requests.get(url, timeout=15, headers=headers)
+        if r.status_code != 200:
+            return None
+        data = r.json()
+        parents = data.get("parents") or []
+        if parents:
+            return parents[0].get("sha")
+    except Exception:
+        pass
+    return None
+
+
 def main():
     if not requests:
         print("pip install requests", file=sys.stderr)
@@ -100,16 +124,20 @@ def main():
             if bug_id in seen_bug_ids:
                 continue
             seen_bug_ids.add(bug_id)
+            # CVE URL points at the fix commit; resolve parent as buggy commit so buggy_commit != fixed_commit
+            buggy_sha = get_parent_commit(proj, sha)
+            if not buggy_sha:
+                buggy_sha = sha  # fallback if API fails (e.g. rate limit)
             catalog["bugs"].append({
                 "bug_id": bug_id,
                 "project": proj,
-                "buggy_commit": sha,
+                "buggy_commit": buggy_sha,
                 "fixed_commit": sha,
                 "test_cmd": "make test" if "curl" in proj else "make check",
-                "build_cmd": "./configure && make",
+                "build_cmd": "",  # Per-repo: set after validation (cmake/autotools/plain make vary)
             })
             if proj not in catalog["projects_info"] and proj in REPO_URL_MAP:
-                catalog["projects_info"][proj] = {"repo_url": REPO_URL_MAP[proj], "build_system": "autotools"}
+                catalog["projects_info"][proj] = {"repo_url": REPO_URL_MAP[proj]}
 
     # 2) List project dirs and fetch bugs_list_new.json for each
     print("Fetching project bug lists...")
@@ -151,16 +179,16 @@ def main():
                 "buggy_commit": commit_before,
                 "fixed_commit": commit_after,
                 "test_cmd": "make test" if "curl" in proj else "make check",
-                "build_cmd": "./configure && make",
+                "build_cmd": "",  # Per-repo: set after validation (cmake/autotools/plain make vary)
             })
         if proj not in catalog["projects_info"] and proj in REPO_URL_MAP:
-            catalog["projects_info"][proj] = {"repo_url": REPO_URL_MAP[proj], "build_system": "autotools"}
+            catalog["projects_info"][proj] = {"repo_url": REPO_URL_MAP[proj]}
 
-    # Ensure we have projects_info for any project that appears in bugs
+    # Ensure we have projects_info for any project that appears in bugs (repo_url only; build_system/build_cmd per-repo)
     for b in catalog["bugs"]:
         p = b.get("project")
         if p and p not in catalog["projects_info"] and p in REPO_URL_MAP:
-            catalog["projects_info"][p] = {"repo_url": REPO_URL_MAP[p], "build_system": "autotools"}
+            catalog["projects_info"][p] = {"repo_url": REPO_URL_MAP[p]}
 
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(catalog, f, indent=2)
