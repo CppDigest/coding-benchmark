@@ -11,7 +11,7 @@
 
 ### Where is the official dataset/repository hosted?
 
-- **Datasets:** Hugging Face — `AmazonScience/SWE-PolyBench` (full 2,110), `AmazonScience/SWE-PolyBench_500` (500 subset), `AmazonScience/SWE-PolyBench_Verified` (382 verified).
+- **Datasets:** Hugging Face — `AmazonScience/SWE-PolyBench` (full 2,110), `AmazonScience/SWE-PolyBench_500` (500 subset), `AmazonScience/SWE-PolyBench_Verified` (394 verified).
 - **Code and evaluation:** GitHub — [amazon-science/SWE-PolyBench](https://github.com/amazon-science/SWE-PolyBench). Evaluation script: `src/poly_bench_evaluation/run_evaluation.py`.
 - **Documentation / leaderboard:** [amazon-science.github.io/SWE-PolyBench](https://amazon-science.github.io/SWE-PolyBench).
 
@@ -37,7 +37,7 @@
 
 ### How are issues validated for correctness?
 
-- **Gold patch:** The solution patch comes from the merged PR that resolved the issue. **Tests:** F2P (tests that were failing and are fixed by the PR) and P2P (tests that must remain passing). The official evaluator runs the test command inside an instance-specific Docker image and checks F2P/P2P outcomes. The **Verified** subset (382 instances) has additional curation and updated Dockerfiles for a 100% gold pass rate.
+- **Gold patch:** The solution patch comes from the merged PR that resolved the issue. **Tests:** F2P (tests that were failing and are fixed by the PR) and P2P (tests that must remain passing). The official evaluator runs the test command inside an instance-specific Docker image and checks F2P/P2P outcomes. The **Verified** subset (394 instances) has additional curation and updated Dockerfiles for a 100% gold pass rate.
 
 ### What difficulty levels or categories exist?
 

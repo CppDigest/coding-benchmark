@@ -82,7 +82,7 @@ def main() -> int:
     print(f"Loading {args.dataset_name} from Hugging Face...", file=sys.stderr)
     try:
         ds = load_dataset(args.dataset_name, split="test")
-    except Exception as e:
+    except (OSError, ValueError) as e:
         print(f"Failed to load dataset: {e}", file=sys.stderr)
         return 1
 

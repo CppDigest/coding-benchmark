@@ -29,9 +29,14 @@ def main() -> int:
     parser.add_argument("--use-official", action="store_true", help="Run official SWE-PolyBench run_evaluation.py (requires --polybench-repo)")
     parser.add_argument("--polybench-repo", type=Path, default=None, help="Path to cloned amazon-science/SWE-PolyBench repo for official eval")
     parser.add_argument("--num-threads", type=int, default=1, help="Threads for official evaluator")
+    parser.add_argument("--repo-path", type=Path, default=None, help="Repository path passed to official evaluator (optional)")
     args = parser.parse_args()
 
     args.result_path.mkdir(parents=True, exist_ok=True)
+
+    if args.use_official and not args.polybench_repo:
+        print("--polybench-repo is required when --use-official is set.", file=sys.stderr)
+        return 1
 
     if args.use_official and args.polybench_repo:
         run_script = args.polybench_repo / "src" / "poly_bench_evaluation" / "run_evaluation.py"
@@ -41,12 +46,14 @@ def main() -> int:
         cmd = [
             sys.executable,
             str(run_script),
-            "--dataset-path", "AmazonScience/SWE-PolyBench_500",
+            "--dataset-path", str(args.dataset_path.resolve() if args.dataset_path.is_file() else args.dataset_path),
             "--predictions-path", str(args.predictions_path.resolve()),
             "--result-path", str(args.result_path.resolve()),
             "--num-threads", str(args.num_threads),
             "--delete-image",
         ]
+        if args.repo_path is not None:
+            cmd.extend(["--repo-path", str(args.repo_path.resolve())])
         try:
             subprocess.run(cmd, cwd=str(args.polybench_repo), check=True)
         except subprocess.CalledProcessError as e:
@@ -59,7 +66,20 @@ def main() -> int:
             print("Pass rate / resolved:", summary.get("pass_rate"), summary.get("resolved", ""))
         return 0
 
-    # Lightweight path: count predictions and optionally aggregate existing results
+    # Lightweight path: validate dataset, then count predictions and optionally aggregate existing results
+    if not args.dataset_path.exists():
+        print(f"Dataset file not found: {args.dataset_path}", file=sys.stderr)
+        return 1
+    try:
+        with open(args.dataset_path, encoding="utf-8") as f:
+            _ = [json.loads(line) for line in f if line.strip()]
+    except OSError as e:
+        print(f"Cannot read dataset: {args.dataset_path}: {e}", file=sys.stderr)
+        return 1
+    except json.JSONDecodeError as e:
+        print(f"Invalid JSONL in dataset {args.dataset_path}: {e}", file=sys.stderr)
+        return 1
+
     if not args.predictions_path.exists():
         print(f"Predictions file not found: {args.predictions_path}", file=sys.stderr)
         return 1
