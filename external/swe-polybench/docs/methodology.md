@@ -1,6 +1,12 @@
 # SWE-PolyBench 500 Subset: Methodology
 
-**SWE-PolyBench 500 is not a C/C++ dataset.** It contains only Java, JavaScript, TypeScript, and Python. This document answers the research questions for Child Issue 4 and describes issue selection, language coverage, difficulty, test generation, and the replication plan for Boost/Clang.
+## Disclaimer: Not a C/C++ dataset
+
+**SWE-PolyBench 500 does not contain C/C++.** The official 500 subset includes only Java, JavaScript, TypeScript, and Python (125 instances per language). There are **zero** C/C++ issues. We do **not** produce a C/C++ subset file. This benchmark cannot be used for C/C++ agent evaluation. For C/C++ use other benchmarks in this repo (e.g. SWE-Bench Multilingual, Defects4C, BugSwarm, Boost/Clang plan).
+
+---
+
+This document answers the research questions for Child Issue 4 and describes issue selection, language coverage, difficulty, test generation, and the replication plan for Boost/Clang.
 
 ## Research questions
 
@@ -17,11 +23,11 @@
 
 ### What languages are included in the 500 subset?
 
-- **Four languages:** Java, JavaScript, TypeScript, Python. **125 instances per language** (500 total). The benchmark does **not** currently include C/C++; the C/C++ filtered subset (`cpp_subset.jsonl`) will be non-empty only if the dataset is extended.
+- **Four languages:** Java, JavaScript, TypeScript, Python. **125 instances per language** (500 total). The benchmark does **not** include C/C++.
 
 ### How many C/C++ issues are in the 500 subset?
 
-- **Zero** in the current release. The 500 subset is stratified across Java, JavaScript, TypeScript, and Python only. Our download script still produces `cpp_subset.jsonl` (filtered by `language` in C/C++) so the pipeline is ready when/if C/C++ instances are added.
+- **Zero.** The 500 subset is stratified across Java, JavaScript, TypeScript, and Python only. There are no C/C++ instances. We do not produce a C/C++ subset file. **Do not use SWE-PolyBench 500 for C/C++ evaluation.**
 
 ### What is the task format? (issue description, expected output, tests)
 
@@ -89,7 +95,7 @@
 | SWE-PolyBench vs SWE-Bench | Multi-language, repo-level; SWE-Bench is Python-focused |
 | Hosting | Hugging Face (AmazonScience/SWE-PolyBench_500); GitHub (evaluation code) |
 | Languages in 500 | Java, JavaScript, TypeScript, Python (125 each) |
-| C/C++ in 500 | 0 in current release; pipeline ready via cpp_subset.jsonl |
+| C/C++ in 500 | **0.** No C/C++ subset produced. Do not use for C/C++ evaluation. |
 | Task format | instance_id, repo, problem_statement, patch, test_command, F2P, P2P, language, task_category, Dockerfile |
 | Official evaluation | run_evaluation.py in repo; our evaluate.py can delegate with --use-official |
 | Issue sources | 21 repos across 4 languages |

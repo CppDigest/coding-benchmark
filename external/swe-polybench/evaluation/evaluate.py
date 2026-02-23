@@ -2,6 +2,9 @@
 """
 Evaluation runner for SWE-PolyBench: compute accuracy/pass-rate from predictions.
 
+NOTE: SWE-PolyBench 500 has no C/C++ issues (Java, JS, TS, Python only).
+Use data/polybench_500.jsonl for evaluation.
+
 Expects a predictions JSONL with instance_id and model_patch per line.
 Optionally delegates to the official SWE-PolyBench harness (run_evaluation.py)
 if --use-official and repo path are provided; otherwise computes pass rate

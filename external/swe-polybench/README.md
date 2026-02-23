@@ -1,14 +1,15 @@
 # SWE-PolyBench 500 Subset (Child Issue 4)
 
-**Not a C/C++ dataset.** SWE-PolyBench 500 is a **multi-language** benchmark with **Java, JavaScript, TypeScript, and Python only** (125 issues per language). There are no C/C++ issues in the official 500 subset. We still produce `cpp_subset.jsonl` (filtered by language) so the pipeline is ready if the benchmark adds C/C++ later.
+## Important: This is not a C/C++ dataset
+
+**SWE-PolyBench 500 contains only Java, JavaScript, TypeScript, and Python** (125 issues per language). There are no C/C++ issues. We do **not** produce a C/C++ subset file—use SWE-Bench Multilingual (Issue 1), Defects4C (Issue 2), BugSwarm (Issue 3), or the Boost/Clang plan (Issue 6) for C/C++.
 
 ## Layout
 
-- **scripts/download.py** — Download 500 subset from Hugging Face (`AmazonScience/SWE-PolyBench_500`), write `data/polybench_500.jsonl` and `data/cpp_subset.jsonl`.
+- **scripts/download.py** — Download 500 subset from Hugging Face (`AmazonScience/SWE-PolyBench_500`), write `data/polybench_500.jsonl`.
 - **data/polybench_500.jsonl** — Full 500 issues (one JSON per line). Each has: `language`, `repo`, `issue_text`, `test_cmd`, `expected_patch`, plus `instance_id`, `base_commit`, `F2P`, `P2P`, `task_category`, etc.
-- **data/cpp_subset.jsonl** — C/C++ filtered subset (same schema). **Always empty** for the current benchmark — the 500 subset does not include C/C++.
 - **evaluation/evaluate.py** — Evaluation runner: accuracy/pass-rate. Use `--use-official --polybench-repo /path/to/SWE-PolyBench` to run the official harness.
-- **docs/methodology.md** — Research Q&A, issue selection, multi-language coverage, difficulty, test generation, replication plan for Boost/Clang.
+- **docs/methodology.md** — Research Q&A, issue selection, language coverage, difficulty, test generation, replication plan for Boost/Clang.
 
 ## Quick start
 
@@ -29,7 +30,7 @@ python evaluation/evaluate.py --dataset-path data/polybench_500.jsonl --predicti
 ## Acceptance criteria (Child Issue 4)
 
 - **500-issue dataset** downloadable via `python scripts/download.py`.
-- **C/C++ identification:** `data/cpp_subset.jsonl` holds C/C++ issues when present; for SWE-PolyBench 500 there are none (not a C/C++ dataset).
+- **C/C++:** The 500 subset has **no C/C++**; no C/C++ subset file is produced (deliverable N/A). Use other benchmarks in this repo for C/C++.
 - **Evaluation script** returns accuracy/pass-rate (via official harness when `--use-official`).
 - **Per issue:** `language`, `repo`, `issue_text`, `test_cmd`, `expected_patch` (and `instance_id`, `base_commit`, F2P, P2P, etc.).
 

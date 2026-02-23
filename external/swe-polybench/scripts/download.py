@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """
-Download SWE-PolyBench 500 subset from Hugging Face and write JSONL files.
+Download SWE-PolyBench 500 subset from Hugging Face and write JSONL.
 
-1. Load AmazonScience/SWE-PolyBench_500 (500 instances, 125 per language).
+The official SWE-PolyBench_500 dataset contains only Java, JavaScript,
+TypeScript, and Python (125 per language). There are no C/C++ issues.
+No C/C++ subset is produced; use other benchmarks in this repo for C/C++.
+
+1. Load AmazonScience/SWE-PolyBench_500 (500 instances).
 2. Write full 500 to data/polybench_500.jsonl (one JSON object per line).
-3. Filter for C/C++ and write data/cpp_subset.jsonl.
 
 Required: pip install datasets
 
@@ -71,7 +74,6 @@ def main() -> int:
     out_dir = args.output_dir or (root / "data")
     out_dir.mkdir(parents=True, exist_ok=True)
     path_500 = out_dir / "polybench_500.jsonl"
-    path_cpp = out_dir / "cpp_subset.jsonl"
 
     try:
         from datasets import load_dataset
@@ -93,19 +95,7 @@ def main() -> int:
     with open(path_500, "w", encoding="utf-8") as f:
         for r in records:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
-    print(f"Wrote {path_500}", file=sys.stderr)
-
-    cpp_langs = ("C", "C++", "C/C++")
-    cpp_records = [r for r in records if (r.get("language") or "").strip() in cpp_langs]
-    with open(path_cpp, "w", encoding="utf-8") as f:
-        for r in cpp_records:
-            f.write(json.dumps(r, ensure_ascii=False) + "\n")
-    print(f"Wrote {len(cpp_records)} C/C++ instances to {path_cpp}", file=sys.stderr)
-
-    if len(cpp_records) == 0:
-        from collections import Counter
-        langs = Counter(r.get("language") for r in records)
-        print("No C/C++ in 500 subset. Languages: %s" % dict(langs), file=sys.stderr)
+    print(f"Wrote {path_500} ({len(records)} instances).", file=sys.stderr)
     return 0
 
 
