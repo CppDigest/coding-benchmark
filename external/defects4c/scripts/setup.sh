@@ -39,5 +39,5 @@ if [ ! -f "$DATA_DIR/bug_catalog.json" ] || [ ! -s "$DATA_DIR/bug_catalog.json" 
   exit 1
 fi
 
-echo "Setup complete. Next: python scripts/checkout_bug.py --bug-id PROJECT@SHA"
+echo "Setup complete. Next: python scripts/checkout_bug.py --bug-id PROJECT@SHA  (or --bug-id PROJECT-1)"
 echo "Catalog: $DATA_DIR/bug_catalog.json"

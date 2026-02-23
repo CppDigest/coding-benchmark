@@ -11,6 +11,7 @@ import json
 import os
 import re
 import sys
+from collections import defaultdict
 try:
     import requests
 except ImportError:
@@ -189,6 +190,13 @@ def main():
         p = b.get("project")
         if p and p not in catalog["projects_info"] and p in REPO_URL_MAP:
             catalog["projects_info"][p] = {"repo_url": REPO_URL_MAP[p]}
+
+    # Assign per-project short ids (PROJECT-1, PROJECT-2, ...) for acceptance: --bug-id PROJECT-1
+    version_per_project = defaultdict(int)
+    for b in catalog["bugs"]:
+        p = b.get("project", "")
+        version_per_project[p] += 1
+        b["version"] = version_per_project[p]
 
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(catalog, f, indent=2)

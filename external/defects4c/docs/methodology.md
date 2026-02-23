@@ -11,10 +11,10 @@ This document covers (A) how Defects4C is built and used, (B) how to run our wra
 | **What is the official source for Defects4C?** | **GitHub:** [https://github.com/defects4c/defects4c](https://github.com/defects4c/defects4c). Docs: [https://defects4c.github.io](https://defects4c.github.io). |
 | **How many bugs/projects are included?** | **248** verified buggy functions, **102** vulnerable functions, **9M+** bug-relevant commits. Multiple C/C++ projects including libxml2, openssl, curl, nginx, apache (and others in the full benchmark). |
 | **What is the structure of each bug entry?** | Each entry has: **buggy version** = commit SHA (buggy state); **fixed version** = commit or patch that fixes it; **test cases** = project test suite or specific test command. Our catalog uses: `bug_id`, `project`, `buggy_commit`, `fixed_commit`, `test_cmd`, `build_cmd`. |
-| **How do I checkout a specific buggy/fixed version programmatically?** | Run: `python scripts/checkout_bug.py --bug-id PROJECT@SHA` (buggy) or add `--fixed` for the fixed version. Script clones the project repo and runs `git checkout <commit>`. See § B) Checkout a bug. |
+| **How do I checkout a specific buggy/fixed version programmatically?** | Run: `python scripts/checkout_bug.py --bug-id PROJECT@SHA` or **`--bug-id PROJECT-1`** (short id, per-project index). Use `--fixed` for the fixed version. Script clones the project repo and runs `git checkout <commit>`. See § B) Checkout a bug. |
 | **What build systems are used?** | **Make** (and Autotools: `./configure && make`), **CMake**, and project-specific config (e.g. OpenSSL, nginx). Per-project `build_system` and `build_cmd` are in `data/bug_catalog.json` (`projects_info` and per-bug `build_cmd`). |
 | **What command-line interface does Defects4C provide?** | **Upstream:** HTTP API (list defects, get defect, build patch, run fix verification). **This repo:** Python CLI — `download_dataset.py` (fetch full catalog from GitHub), `checkout_bug.py` (checkout by bug-id), `run_tests.py` (run tests by bug-id). |
-| **How do I run the test suite for a specific bug to verify fixes?** | Run: `python evaluation/run_tests.py --bug-id PROJECT@SHA`. Use `--build-first` to run `build_cmd` before `test_cmd`. Tests are defined per bug in the catalog (`test_cmd`). See § B) Run tests. |
+| **How do I run the test suite for a specific bug to verify fixes?** | Run: `python evaluation/run_tests.py --bug-id PROJECT@SHA` or **`--bug-id PROJECT-1`**. Use `--build-first` to run `build_cmd` before `test_cmd`. Tests are defined per bug in the catalog (`test_cmd`). See § B) Run tests. |
 | **What are the system requirements?** | **Compilers:** gcc/clang; **build:** make, CMake (for some projects), Autotools (configure); **runtime:** git, Python 3; **optional:** Docker for reproducible environment. See § System requirements below. |
 | **Is there a Docker image available?** | **Yes.** (1) **Upstream:** Defects4C repo has `docker_dirs/Dockerfile` (oss-fuzz-style base, compilers, deps). (2) **This repo:** `external/defects4c/docker/Dockerfile` — slim image with git, build-essential, Python, and our scripts. Build: `docker build -f external/defects4c/docker/Dockerfile external/defects4c`. |
 
@@ -94,20 +94,21 @@ This clones the Defects4C repo and optionally refreshes `data/bug_catalog.json` 
 
 ```bash
 python scripts/checkout_bug.py --bug-id PROJECT@SHA
-# Or short form if in catalog: --bug-id PROJECT-1
-# Fixed version: --bug-id PROJECT@SHA --fixed
+# Or short form (per-project 1-based index): --bug-id PROJECT-1, PROJECT-2, ...
+# Fixed version: --bug-id PROJECT-1 --fixed
 ```
 
-This clones the project (if needed) into `repos/<project>` and checks out the given commit.
+This clones the project (if needed) into `repos/<project>` and checks out the given commit. You can use either the full `PROJECT@SHA` id from the catalog or the short id `PROJECT-N` (e.g. `ARMmbed___mbedtls-1`, `libgd___libgd-3`).
 
 ### Run tests
 
 ```bash
 python evaluation/run_tests.py --bug-id PROJECT@SHA
+# Or short form: --bug-id PROJECT-1
 # Optional: --build-first to run build_cmd before test_cmd
 ```
 
-Uses `test_cmd` from the catalog (or default `make check`).
+Uses `test_cmd` from the catalog (or default `make check`). Accepts full `PROJECT@SHA` or short id `PROJECT-N`.
 
 ### Docker
 

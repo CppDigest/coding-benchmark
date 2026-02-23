@@ -24,6 +24,7 @@ def find_bug(catalog: dict, bug_id: str) -> dict | None:
     for b in catalog.get("bugs", []):
         if b.get("bug_id") == bug_id:
             return b
+        # Short form: PROJECT-1, PROJECT-2, ... (per-project 1-based index from catalog)
         short = f"{b.get('project')}-{b.get('version', '')}".rstrip("-")
         if short == bug_id:
             return b
