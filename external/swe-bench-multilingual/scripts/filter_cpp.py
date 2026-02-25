@@ -69,7 +69,7 @@ def main():
         patch_col = table.column("patch")
         problem_col = table.column("problem_statement")
         instance_id_col = table.column("instance_id")
-        hints_col = table.column("hints_text") if "hints_text" in table.column_names else [""] * table.num_rows
+        hints_col = table.column("hints_text") if "hints_text" in table.column_names else None
         fail_to_pass = table.column("FAIL_TO_PASS") if "FAIL_TO_PASS" in table.column_names else None
         pass_to_pass = table.column("PASS_TO_PASS") if "PASS_TO_PASS" in table.column_names else None
 
@@ -81,7 +81,7 @@ def main():
             base_commit = base_commit_col[i].as_py() if hasattr(base_commit_col[i], "as_py") else str(base_commit_col[i])
             problem = problem_col[i].as_py() if hasattr(problem_col[i], "as_py") else str(problem_col[i])
             instance_id = instance_id_col[i].as_py() if hasattr(instance_id_col[i], "as_py") else str(instance_id_col[i])
-            hints = hints_col[i].as_py() if hints_col is not None and hasattr(hints_col[i], "as_py") else ""
+            hints = hints_col[i].as_py() if hints_col is not None else ""
             if hints:
                 issue_text = f"{problem}\n\n{hints}".strip()
             else:
