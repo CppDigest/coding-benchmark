@@ -32,6 +32,10 @@ external/defects4c/defects4c_upstream/
 external/defects4c/data/bug_catalog.json
 
 
+# BugSwarm (Child Issue 3)
+external/bugswarm/data/full_artifacts.json
+external/bugswarm/data/cpp_artifacts.json
+
 # IDE / OS
 .idea/
 .vscode/
