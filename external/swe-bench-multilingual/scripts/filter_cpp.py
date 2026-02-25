@@ -15,7 +15,7 @@ import re
 try:
     import pyarrow.parquet as pq
 except ImportError:
-    raise SystemExit("Install pyarrow: pip install pyarrow")
+    raise SystemExit("Install pyarrow: pip install pyarrow") from None
 
 # File extensions that indicate C/C++ in a diff path (exclude .ch, .ts, .cs, .html, etc.)
 CPP_EXT_RE = re.compile(
@@ -64,6 +64,13 @@ def main():
             continue
         path = os.path.join(raw_dir, name)
         table = pq.read_table(path)
+        required = ("repo", "base_commit", "patch", "problem_statement", "instance_id")
+        missing = [c for c in required if c not in table.column_names]
+        if missing:
+            raise SystemExit(
+                f"Missing required columns in {path}: {missing}. "
+                f"Available: {sorted(table.column_names)}."
+            ) from None
         repo_col = table.column("repo")
         base_commit_col = table.column("base_commit")
         patch_col = table.column("patch")
