@@ -1,5 +1,6 @@
 # Boost Benchmark Creation Plan
 
+**Data source:** Use the **pre-collected Boost archives** (e.g. [CppDigest/boost-library-context](https://github.com/CppDigest/boost-library-context)). Mining = read from these archives and filter by date; do not call the GitHub API at runtime. Apply a **cutoff date** (e.g. `--after-date 2026-02-05`) so the benchmark uses only data after the likely training cutoff of the models under evaluation. 
 ## 1. Repository Analysis
 
 ### 1.1 List of Boost libraries to include
@@ -42,9 +43,9 @@ gh run view <run-id> --repo boostorg/beast --log-failed
 
 - **Pattern:** Find runs with `conclusion: failure`, then find a later run or PR that fixes the same branch → defines a fail→pass pair.
 
-## 2. Issue Mining Strategy
+## 2. Issue Mining Strategy (from archives)
 
-### 2.1 GitHub Issues
+### 2.1 Mining from archives (Boost)
 
 - **API queries:** Use GitHub REST/GraphQL or `gh` to list closed issues with labels like `bug`, `bugfix`, or no label but with “fix” in title/body.
 - **Link issues to PRs/commits:** Via “merged” PRs that reference the issue (`Fixes #N`, `Closes #N`) or that are linked in the issue.
@@ -54,21 +55,13 @@ gh run view <run-id> --repo boostorg/beast --log-failed
   - Prefer issues where the PR adds or modifies a test (so we have a test_cmd or test target).
 - **Example (Python with PyGithub):**
 
-```python
-# Pseudocode
-repo = g.get_repo("boostorg/beast")
-issues = repo.get_issues(state="closed", labels=["bug"])
-for i in issues:
-    prs = [pr for pr in i.get_timeline_events() if pr.event == "closed" and pr.commit_id]
-    if prs and has_test_change(prs[0]):
-        candidates.append({"issue_id": i.number, "pr": prs[0], "repo": repo.full_name})
-```
+**Archive layout:** See [boost-library-context README](https://github.com/CppDigest/boost-library-context/blob/master/README.md). Layout: `{library}/issues/YYYY/YYYY-MM/#N - Title.md` and same under `pull_requests/`. Parse metadata `Closed at`, `Merged at`, `Url`. **Script:** `--archives-dir`, `--after-date YYYY-MM-DD`. Output JSONL: `library`, `issue_id`, `pr_number`, `closed_at`, `url`, `source_file`.
 
-### 2.2 Git history analysis
+### 2.2 Git history analysis (after archive mining)
 
+- **Input:** Candidate list from 2.1. For each candidate, find merge/fix commit (e.g. via `Fixes #N` in PR).
 - **Bug-fix commit patterns:** Commits with messages like “Fix …”, “Fixes #123”, “Resolve …”, “Correct …”.
-- **Parent–child pairs:** For each such commit `C`, treat `C^` (parent) as buggy and `C` as fixed. Optionally restrict to commits that touch at least one test file or that are linked to an issue.
-- **Verify test behavior:** For each pair, run test_cmd (or the test target used in CI) at `C^` (expect fail) and at `C` (expect pass). Discard pairs where this does not hold.
+- **Verify:** Run test_cmd at `C^` (expect fail) and at `C` (expect pass). Discard if not.
 
 **Example:**
 
@@ -101,6 +94,19 @@ cd build && ctest -R "Beast.*Http.*Parser" -V
 - **B2 (Boost.Build):** Default for many Boost libs. Document the minimal `b2` invocation (e.g. `b2 -j4 libs/<lib>/test/...` or a specific target). Use a fixed toolchain (e.g. `gcc`, `msvc`) in the spec.
 - **CMake:** Newer or dual-build libs. Document `cmake -B build`, `cmake --build build`, and how to run tests (`ctest` or the test binary). Specify generator (Ninja recommended).
 - **Dependency management:** If a library depends on other Boost libs, use a full Boost checkout or a manifest (e.g. boost.workspace) so that the same revisions are used in Docker and in the dataset spec.
+
+### Boost tooling and environment
+
+| Tool | Version (min) | Purpose |
+|------|----------------|--------|
+| **B2 (Boost.Build)** | 4.x | Build and run Boost tests for B2-based libs |
+| **CMake** | 3.16+ | Build and test for CMake-based Boost libs |
+| **C++ compiler** | GCC 10+ or Clang 10+ or MSVC 2019+ | Build Boost (match CI where possible) |
+| **Make or Ninja** | — | CMake generator; Ninja recommended |
+
+**Environment:** Full Boost tree (e.g. `boostorg/boost`) or boost.workspace-style layout. Optional: pre-installed Boost (system or vcpkg); document in each case's `build_cmd` if used.
+
+**Docker (Boost):** Base image e.g. `ubuntu:22.04` or `ubuntu:24.04`. Packages: `build-essential`, `cmake`, `ninja-build`, `python3`, `git`; for B2 include Boost.Build. Document compiler (e.g. `gcc-11`) and B2/CMake versions in the Dockerfile or image tag.
 
 ## 5. Dataset Format
 

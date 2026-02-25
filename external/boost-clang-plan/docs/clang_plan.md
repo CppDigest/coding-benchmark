@@ -62,6 +62,21 @@ lit clang/test/Sema/array.c
 
 ## 4. Build System Handling
 
+### Clang tooling and environment
+
+| Tool | Version (min) | Purpose |
+|------|----------------|--------|
+| **CMake** | 3.20+ | Configure LLVM/Clang |
+| **Ninja** | 1.10+ | Build LLVM/Clang (recommended) |
+| **C++ compiler** | GCC 9+ or Clang 10+ | Host compiler for building LLVM/Clang |
+| **Python 3** | 3.6+ | Required by lit (LLVM test runner) |
+| **lit** | (bundled in LLVM) | Run `clang/test/` tests; use from LLVM tree |
+| **FileCheck** | (bundled in LLVM) | Used by lit tests; built with LLVM |
+
+**Environment:** LLVM monorepo (e.g. `llvm/llvm-project`). Clone (full or sparse) so that `clang/`, `llvm/`, and `cmake/` are present. Build: out-of-tree; document `LLVM_ENABLE_PROJECTS=clang` and any `LLVM_TARGETS_TO_BUILD`.
+
+**Docker (Clang):** Base image e.g. `ubuntu:22.04`. Packages: `cmake`, `ninja-build`, `build-essential`, `python3`, `git`. Clone and build LLVM inside container (or mount) per validation script.
+
 - **CMake:** LLVM/Clang uses CMake. Standard configure and build:
 
 ```bash

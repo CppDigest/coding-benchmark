@@ -2,6 +2,23 @@
 
 This document synthesizes methodology insights from the external benchmark collection (Child Issues 1–5) and identifies common patterns to adapt for the Boost/Clang internal benchmark.
 
+## Data source: pre-collected archives (no live API mining)
+
+Boost and Clang GitHub (and Bugzilla/Phabricator) content is **already collected** by the org. Data is available as:
+
+- **Raw JSON files** — canonical source for scripts; use for parsing and filtering.
+- **Markdown versions** — same content in human-readable form (e.g. [CppDigest/boost-library-context](https://github.com/CppDigest/boost-library-context)); use to inspect structure and update plans.
+
+**Mining** for the benchmark means **reading and filtering these archives** (e.g. `--archives-dir`, `--after-date`), not calling GitHub/Bugzilla APIs at runtime. Script templates accept paths to the archive root and optionally a cutoff date.
+
+## Recency and contamination avoidance
+
+Benchmarking requires **recent data** so that test cases are not already in the training data of the underlying LLMs. Example: a model released on 2026-02-05 may have been trained on Boost/LLVM issues and PRs up to that date; we should **benchmark using data after that cutoff**.
+
+- Define a **cutoff date** (e.g. `2026-02-05`) in the methodology and dataset schema.
+- All mining and extraction scripts must support **`--after-date`** (or `--since`) and exclude issues/PRs/commits before that date.
+- Document the cutoff in the released dataset (e.g. `min_issue_date` or `cutoff_date` in the catalog).
+
 ## Summary of Issues 1–5
 
 | Issue | Benchmark | Main artifact | Pattern |
@@ -57,11 +74,42 @@ This document synthesizes methodology insights from the external benchmark colle
 
 ## Tooling Implications
 
-- **Mining:** Scripts to query GitHub/LLVM (issues, PRs, commits) and output candidate list with metadata.
-- **Extraction:** Scripts to extract bug-fix pairs (buggy/fixed commits), test commands, and optional patches.
+- **Mining:** Scripts that **read the pre-collected archives** (JSON or markdown layout), apply `--after-date` filter, and output a candidate list with metadata (issue_id, repo, closed_at, url, etc.). No live GitHub/Bugzilla API calls required for the primary path.
+- **Extraction:** Scripts to extract bug-fix pairs (buggy/fixed commits) from the candidate list and git history, plus test commands and optional patches.
 - **Generation:** Templates to produce test runners or lit tests when not already present.
 - **Validation:** Pipeline that checks “buggy fails, fixed passes” and optionally build reproducibility (Docker).
-- **Dependencies:** Python 3, Git, Docker; for Boost: B2 or CMake, Boost libs; for Clang: CMake, Ninja, LLVM/Clang build.
+### Core tooling (shared by Boost and Clang)
+
+| Tool | Version (min) | Purpose |
+|------|----------------|--------|
+| **Python** | 3.9+ | Mining scripts, validation runner, lit (Clang) |
+| **Git** | 2.x | Clone, checkout by commit, log/blame for mining |
+| **Docker** | 20.x+ | Reproducible build and test environment |
+
+Python dependencies for scripts in `scripts/`: `requests>=2.28.0` (for archive/HTTP). Clang: Python 3 is used by **lit** (LLVM test runner); no extra pip deps for lit when using the LLVM tree.
+
+### Script templates (`scripts/`)
+
+| Script | Depends on | Purpose |
+|--------|------------|---------|
+| `mine_github_issues.py.template` | Python, Git | Read archives (JSON/markdown), apply `--after-date`; output candidate list (JSONL). |
+| `extract_bug_fixes.py.template` | Python, Git | From candidates + repo, output buggy_commit, fixed_commit pairs; optional test behavior check. |
+| `generate_test_cases.py.template` | Python, optional B2/CMake/lit | From (repo, buggy_commit, fixed_commit), derive test_cmd/build_cmd or test_file/build_target; output dataset schema. |
+
+### Validation runner (to be implemented)
+
+- **Input:** Dataset (JSONL or JSON) of cases.
+- **Actions:** For each case, checkout `buggy_commit`, run build + test → expect fail; checkout `fixed_commit`, run build + test → expect pass.
+- **Depends on:** Git, Docker (or pinned host), and either Boost (B2/CMake) or Clang (CMake + Ninja + lit).
+- **Output:** Per-case pass/fail and summary (e.g. buggy fails / fixed passes rate).
+
+### Checklist
+
+- [ ] Python 3.9+, Git, Docker
+- [ ] Boost: B2 and/or CMake, C++ compiler, Boost source tree (see boost_plan.md)
+- [ ] Clang: CMake, Ninja, C++ compiler, LLVM monorepo with lit (see clang_plan.md)
+- [ ] Script templates filled and wired to dataset schema
+- [ ] Dockerfiles for Boost and Clang validation environments
 
 ## Gaps and Decisions for Internal Plan
 
