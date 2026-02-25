@@ -58,6 +58,12 @@ def main():
     output_path = os.path.abspath(args.output)
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
+    if not os.path.exists(raw_dir) or not os.path.isdir(raw_dir):
+        raise SystemExit(
+            f"Raw data directory does not exist or is not a directory: {raw_dir}. "
+            "Run download.py first to fetch parquet files into data/raw/."
+        ) from None
+
     rows = []
     for name in sorted(os.listdir(raw_dir)):
         if not name.endswith(".parquet"):
