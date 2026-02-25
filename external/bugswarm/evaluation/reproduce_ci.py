@@ -14,8 +14,10 @@ from __future__ import annotations
 
 import argparse
 import os
+import signal
 import subprocess
 import sys
+import time
 
 DEFAULT_IMAGE_REPO = "bugswarm/cached-images"
 # Max time for docker run (CI reproduce can be long; 1 hour)
@@ -46,15 +48,10 @@ def main() -> int:
     )
     parser.add_argument(
         "--rm",
-        action="store_true",
+        action=argparse.BooleanOptionalAction,
+        dest="rm",
         default=True,
         help="Remove container after run (default: True)",
-    )
-    parser.add_argument(
-        "--no-rm",
-        action="store_false",
-        dest="rm",
-        help="Do not remove container after run",
     )
     args = parser.parse_args()
 
@@ -72,14 +69,33 @@ def main() -> int:
     cmd.extend([image, "bash", script_name])
 
     try:
-        rc = subprocess.run(cmd, check=False, timeout=TIMEOUT_SECONDS).returncode
-        return rc
-    except subprocess.TimeoutExpired:
-        print(f"Reproduce job timed out after {TIMEOUT_SECONDS}s.", file=sys.stderr)
-        return 124
+        proc = subprocess.Popen(
+            cmd,
+            start_new_session=(os.name != "nt"),
+        )
     except FileNotFoundError:
         print("Docker not found. Install Docker and ensure 'docker' is on PATH.", file=sys.stderr)
         return 1
+    try:
+        proc.communicate(timeout=TIMEOUT_SECONDS)
+        return proc.returncode or 0
+    except subprocess.TimeoutExpired:
+        print(f"Reproduce job timed out after {TIMEOUT_SECONDS}s.", file=sys.stderr)
+        if os.name != "nt" and hasattr(os, "killpg"):
+            try:
+                # Process group = proc.pid when start_new_session=True
+                os.killpg(proc.pid, signal.SIGTERM)
+            except Exception:
+                proc.terminate()
+        else:
+            proc.terminate()
+        time.sleep(2)
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait()
+        return 124
 
 
 if __name__ == "__main__":

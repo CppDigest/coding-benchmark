@@ -240,19 +240,19 @@ def main() -> int:
 
 def get_failure_log_path(api, failed_job_id: str) -> str:
     """Return failure log URL/path for a job via API get_build_log, or canonical BugSwarm log URL."""
-    if api is None:
-        return ""
     job_id = (failed_job_id or "").strip()
     if not job_id:
         return ""
+    fallback = f"https://www.bugswarm.org/artifact-logs/{job_id}/"
+    if api is None:
+        return fallback
     try:
         resp = api.get_build_log(job_id)
         if getattr(resp, "ok", False) and getattr(resp, "url", None):
             return resp.url
-        # Fallback: canonical BugSwarm log URL
-        return f"https://www.bugswarm.org/artifact-logs/{job_id}/"
+        return fallback
     except Exception:
-        return f"https://www.bugswarm.org/artifact-logs/{job_id}/"
+        return fallback
 
 
 def normalize_artifact(raw: dict, api) -> dict:
