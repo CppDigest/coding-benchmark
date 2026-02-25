@@ -1,0 +1,6 @@
+{
+  "num_predictions": 500,
+  "pass_rate": null,
+  "resolved": null,
+  "note": "Run with --use-official --polybench-repo /path/to/SWE-PolyBench for full pass-rate evaluation."
+}
