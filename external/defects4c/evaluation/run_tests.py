@@ -53,6 +53,14 @@ def main():
         sys.exit(1)
 
     project = bug.get("project")
+    if not project or not isinstance(project, str) or not project.strip():
+        print(
+            f"Bug entry has missing or invalid 'project' (bug_id={bug.get('bug_id', args.bug_id)!r}). "
+            "Check bug_catalog.json.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    project = project.strip()
     project_dir = os.path.join(os.path.abspath(args.work_dir), project)
     if not os.path.isdir(project_dir):
         print(f"Project dir not found: {project_dir}. Run checkout_bug.py first.", file=sys.stderr)

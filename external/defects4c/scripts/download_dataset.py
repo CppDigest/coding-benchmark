@@ -49,6 +49,8 @@ REPO_URL_MAP = {
     "yhirose___cpp-peglib": "https://github.com/yhirose/cpp-peglib.git",
     "znc___znc": "https://github.com/znc/znc.git",
 }
+# Default build command per project (autotools); used when regenerating bug_catalog.json so run_tests --build-first works.
+BUILD_CMD_MAP = {proj: "./configure && make" for proj in REPO_URL_MAP}
 
 
 def project_from_github_url(url: str) -> str | None:
@@ -76,8 +78,8 @@ def get_parent_commit(project: str, sha: str) -> str | None:
         parents = data.get("parents") or []
         if parents:
             return parents[0].get("sha")
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"get_parent_commit({project!r}, {sha[:8]}...): {e}", file=sys.stderr)
     return None
 
 
@@ -135,10 +137,13 @@ def main():
                 "buggy_commit": buggy_sha,
                 "fixed_commit": sha,
                 "test_cmd": "make test" if "curl" in proj else "make check",
-                "build_cmd": "",  # Per-repo: set after validation (cmake/autotools/plain make vary)
+                "build_cmd": BUILD_CMD_MAP.get(proj, ""),
             })
             if proj not in catalog["projects_info"] and proj in REPO_URL_MAP:
-                catalog["projects_info"][proj] = {"repo_url": REPO_URL_MAP[proj]}
+                catalog["projects_info"][proj] = {
+                    "repo_url": REPO_URL_MAP[proj],
+                    "build_cmd": BUILD_CMD_MAP.get(proj, ""),
+                }
 
     # 2) List project dirs and fetch bugs_list_new.json for each
     print("Fetching project bug lists...")
@@ -180,16 +185,22 @@ def main():
                 "buggy_commit": commit_before,
                 "fixed_commit": commit_after,
                 "test_cmd": "make test" if "curl" in proj else "make check",
-                "build_cmd": "",  # Per-repo: set after validation (cmake/autotools/plain make vary)
+                "build_cmd": BUILD_CMD_MAP.get(proj, ""),
             })
         if proj not in catalog["projects_info"] and proj in REPO_URL_MAP:
-            catalog["projects_info"][proj] = {"repo_url": REPO_URL_MAP[proj]}
+            catalog["projects_info"][proj] = {
+                "repo_url": REPO_URL_MAP[proj],
+                "build_cmd": BUILD_CMD_MAP.get(proj, ""),
+            }
 
-    # Ensure we have projects_info for any project that appears in bugs (repo_url only; build_system/build_cmd per-repo)
+    # Ensure we have projects_info for any project that appears in bugs
     for b in catalog["bugs"]:
         p = b.get("project")
         if p and p not in catalog["projects_info"] and p in REPO_URL_MAP:
-            catalog["projects_info"][p] = {"repo_url": REPO_URL_MAP[p]}
+            catalog["projects_info"][p] = {
+                "repo_url": REPO_URL_MAP[p],
+                "build_cmd": BUILD_CMD_MAP.get(p, ""),
+            }
 
     # Assign per-project short ids (PROJECT-1, PROJECT-2, ...) for acceptance: --bug-id PROJECT-1
     version_per_project = defaultdict(int)

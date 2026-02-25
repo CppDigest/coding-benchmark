@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from collections import defaultdict
 
 
@@ -16,8 +17,8 @@ def main() -> None:
     base_dir = os.path.dirname(script_dir)
     path = os.path.join(base_dir, "data", "bug_catalog.json")
     if not os.path.isfile(path):
-        print(f"Not found: {path}", flush=True)
-        return
+        print(f"Not found: {path}. Run download_dataset.py or setup.sh first.", file=sys.stderr)
+        sys.exit(1)
     with open(path, encoding="utf-8") as f:
         catalog = json.load(f)
     bugs = catalog.get("bugs", [])

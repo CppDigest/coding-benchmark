@@ -51,7 +51,7 @@ def is_valid_repo_url(url: str) -> bool:
 def sanitize_project(project: str) -> str:
     """Strip path components and restrict to safe chars; raise ValueError if invalid."""
     name = os.path.basename(project)
-    if not name or not SAFE_PROJECT_PATTERN.match(name):
+    if not name or name == "." or name == ".." or not SAFE_PROJECT_PATTERN.match(name):
         raise ValueError(f"Invalid project name: {project!r}")
     return name
 
