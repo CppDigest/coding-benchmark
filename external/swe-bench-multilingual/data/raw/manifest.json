@@ -1,0 +1,8 @@
+{
+  "dataset_id": "SWE-bench/SWE-bench_Multilingual",
+  "revision": "2b7aced941b4873e9cad3e76abbae93f481d1beb",
+  "downloaded_at_utc": "2026-02-16T10:22:42.331564Z",
+  "splits": [
+    "test"
+  ]
+}
