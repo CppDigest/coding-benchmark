@@ -12,6 +12,13 @@ import os
 import subprocess
 import sys
 
+# Reuse validation from checkout_bug to avoid path traversal and keep logic in one place
+_defects4c_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_scripts_dir = os.path.join(_defects4c_root, "scripts")
+if _scripts_dir not in sys.path:
+    sys.path.insert(0, _scripts_dir)
+from checkout_bug import sanitize_project
+
 def load_catalog(data_dir: str) -> dict:
     path = os.path.join(data_dir, "bug_catalog.json")
     if not os.path.isfile(path):
@@ -52,15 +59,19 @@ def main():
         print(f"Bug not found: {args.bug_id}", file=sys.stderr)
         sys.exit(1)
 
-    project = bug.get("project")
-    if not project or not isinstance(project, str) or not project.strip():
+    project_raw = bug.get("project")
+    if not project_raw or not isinstance(project_raw, str) or not project_raw.strip():
         print(
             f"Bug entry has missing or invalid 'project' (bug_id={bug.get('bug_id', args.bug_id)!r}). "
             "Check bug_catalog.json.",
             file=sys.stderr,
         )
         sys.exit(1)
-    project = project.strip()
+    try:
+        project = sanitize_project(project_raw.strip())
+    except ValueError as e:
+        print(f"{e}. Check bug_catalog.json.", file=sys.stderr)
+        sys.exit(1)
     project_dir = os.path.join(os.path.abspath(args.work_dir), project)
     if not os.path.isdir(project_dir):
         print(f"Project dir not found: {project_dir}. Run checkout_bug.py first.", file=sys.stderr)
