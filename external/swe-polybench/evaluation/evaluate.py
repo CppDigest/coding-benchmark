@@ -42,8 +42,11 @@ def main() -> int:
         return 1
 
     if args.use_official and args.polybench_repo:
+        if not args.polybench_repo.is_dir():
+            print(f"--polybench-repo is not an existing directory: {args.polybench_repo}", file=sys.stderr)
+            return 1
         run_script = args.polybench_repo / "src" / "poly_bench_evaluation" / "run_evaluation.py"
-        if not run_script.exists():
+        if not run_script.is_file():
             print(f"Official evaluator not found: {run_script}", file=sys.stderr)
             return 1
         cmd = [
@@ -57,16 +60,22 @@ def main() -> int:
         ]
         if args.repo_path is not None:
             cmd.extend(["--repo-path", str(args.repo_path.resolve())])
+        # subprocess.run uses shell=False; cwd and script path are operator-controlled.
         try:
             subprocess.run(cmd, cwd=str(args.polybench_repo), check=True)
         except subprocess.CalledProcessError as e:
             return e.returncode
         # Official script writes result.json and prints pass rate
         result_file = args.polybench_repo / "result.json"
+        summary = {}
         if result_file.exists():
-            with open(result_file) as f:
-                summary = json.load(f)
-            print("Pass rate / resolved:", summary.get("pass_rate"), summary.get("resolved", ""))
+            try:
+                with open(result_file, encoding="utf-8") as f:
+                    summary = json.load(f)
+            except (json.JSONDecodeError, OSError) as e:
+                print(f"Error reading {result_file!r}: {e}", file=sys.stderr)
+                summary = {"pass_rate": None}
+        print("Pass rate / resolved:", summary.get("pass_rate"), summary.get("resolved", ""))
         return 0
 
     # Lightweight path: validate dataset, then count predictions and optionally aggregate existing results
@@ -86,11 +95,18 @@ def main() -> int:
     if not args.predictions_path.exists():
         print(f"Predictions file not found: {args.predictions_path}", file=sys.stderr)
         return 1
-    with open(args.predictions_path, encoding="utf-8") as f:
-        preds = [json.loads(line) for line in f if line.strip()]
-    for p in preds:
-        if "model_patch" not in p and "patch" in p:
-            p["model_patch"] = p["patch"]
+    try:
+        with open(args.predictions_path, encoding="utf-8") as f:
+            preds = [json.loads(line) for line in f if line.strip()]
+        for p in preds:
+            if "model_patch" not in p and "patch" in p:
+                p["model_patch"] = p["patch"]
+    except OSError as e:
+        print(f"Error reading predictions file {args.predictions_path!r}: {e}", file=sys.stderr)
+        return 1
+    except json.JSONDecodeError as e:
+        print(f"Invalid JSON in predictions file {args.predictions_path!r}: {e}", file=sys.stderr)
+        return 1
     if not all("instance_id" in p and "model_patch" in p for p in preds):
         print("Predictions must have instance_id and model_patch (or patch) per line", file=sys.stderr)
         return 1

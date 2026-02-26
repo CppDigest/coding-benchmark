@@ -77,6 +77,7 @@ def main() -> int:
 
     try:
         from datasets import load_dataset
+        from datasets.exceptions import DatasetNotFoundError
     except ImportError:
         print("Install datasets: pip install datasets", file=sys.stderr)
         return 1
@@ -84,7 +85,7 @@ def main() -> int:
     print(f"Loading {args.dataset_name} from Hugging Face...", file=sys.stderr)
     try:
         ds = load_dataset(args.dataset_name, split="test")
-    except (OSError, ValueError) as e:
+    except (OSError, ValueError, DatasetNotFoundError) as e:
         print(f"Failed to load dataset: {e}", file=sys.stderr)
         return 1
 
