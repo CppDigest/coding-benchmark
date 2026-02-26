@@ -100,11 +100,12 @@ def run_standalone_evaluation(
         if is_resolved:
             resolved += 1
 
+    total_instances = len(issues)
     results = {
         "instances_submitted": len(preds),
         "instances_resolved": resolved,
-        "total_instances": len(issues),
-        "resolution_rate": (resolved / len(preds) * 100.0) if preds else 0.0,
+        "total_instances": total_instances,
+        "resolution_rate": (resolved / total_instances * 100.0) if total_instances else 0.0,
     }
     os.makedirs(output_dir, exist_ok=True)
     results_path = os.path.join(output_dir, "results.json")
@@ -144,7 +145,7 @@ def main():
     parser.add_argument(
         "--harness",
         action="store_true",
-        help="Use official SWE-bench harness if installed (swebench.harness.run_evaluation)",
+        help="Print guidance for using the official SWE-bench harness; does not run it. Evaluation always uses standalone (patch-comparison) mode.",
     )
     args = parser.parse_args()
 
@@ -156,14 +157,8 @@ def main():
         sys.exit(1)
 
     if args.harness:
-        try:
-            from swebench.harness.run_evaluation import run_evaluation as swe_run
-            # SWE-bench expects dataset name and its own args; we'd pass dataset_name and predictions_path
-            print("Harness mode: use official SWE-bench CLI for full execution-based evaluation:", file=sys.stderr)
-            print("  python -m swebench.harness.run_evaluation --dataset_name SWE-bench/SWE-bench_Multilingual --predictions_path <path> ...", file=sys.stderr)
-            # Still run standalone so we always produce results
-        except ImportError:
-            print("swebench not installed; running standalone evaluation only.", file=sys.stderr)
+        print("Harness mode: use official SWE-bench CLI for full execution-based evaluation:", file=sys.stderr)
+        print("  python -m swebench.harness.run_evaluation --dataset_name SWE-bench/SWE-bench_Multilingual --predictions_path <path> ...", file=sys.stderr)
 
     run_standalone_evaluation(
         predictions_path=args.predictions_path,
