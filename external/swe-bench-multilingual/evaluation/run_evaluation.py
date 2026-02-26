@@ -145,7 +145,7 @@ def main():
     parser.add_argument(
         "--harness",
         action="store_true",
-        help="Print guidance for using the official SWE-bench harness; does not run it. Evaluation always uses standalone (patch-comparison) mode.",
+        help="Print instructions for official SWE-bench harness (does NOT run it; standalone evaluation still runs)",
     )
     args = parser.parse_args()
 
