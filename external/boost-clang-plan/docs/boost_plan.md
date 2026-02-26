@@ -127,7 +127,7 @@ Metadata (optional but recommended):
 - `repo` — full repo name, e.g. `boostorg/beast`
 - `pr_number` — PR that fixed the issue
 
-**Example minimal JSON:**
+**Example minimal JSON (two-step build then test):**
 
 ```json
 {
@@ -135,8 +135,8 @@ Metadata (optional but recommended):
   "issue_id": "1234",
   "buggy_commit": "abc123",
   "fixed_commit": "def456",
-  "test_cmd": "cd $BOOST_ROOT && ./b2 -j4 libs/beast/test/beast/unit/http/parser",
-  "build_cmd": "./b2 -j4 libs/beast/test/beast/unit/http/parser",
+  "build_cmd": "cmake --build build -j4",
+  "test_cmd": "ctest -R <test-name> --output-on-failure",
   "repo": "boostorg/beast",
   "difficulty": "medium",
   "lines_changed": 15
