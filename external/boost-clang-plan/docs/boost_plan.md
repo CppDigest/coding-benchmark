@@ -47,15 +47,13 @@ gh run view <run-id> --repo boostorg/beast --log-failed
 
 ### 2.1 Mining from archives (Boost)
 
-- **API queries:** Use GitHub REST/GraphQL or `gh` to list closed issues with labels like `bug`, `bugfix`, or no label but with “fix” in title/body.
-- **Link issues to PRs/commits:** Via “merged” PRs that reference the issue (`Fixes #N`, `Closes #N`) or that are linked in the issue.
-- **Filtering criteria:**
-  - Has an associated merged PR (or clear fix commit).
-  - Description is sufficient to understand the bug (no “fixed” with no context).
-  - Prefer issues where the PR adds or modifies a test (so we have a test_cmd or test target).
-- **Example (Python with PyGithub):**
+**Primary path (archive-first):** Use the pre-collected Boost archives (e.g. [boost-library-context](https://github.com/CppDigest/boost-library-context)). **Archive layout:** See [boost-library-context README](https://github.com/CppDigest/boost-library-context/blob/master/README.md). Layout: `{library}/issues/YYYY/YYYY-MM/#N - Title.md` and same under `pull_requests/`. Parse metadata `Closed at`, `Merged at`, `Url`. **Script:** `--archives-dir`, `--after-date YYYY-MM-DD`. Output JSONL: `library`, `issue_id`, `pr_number`, `closed_at`, `url`, `source_file`. **Filtering:** Prefer closed issues with a linked PR; prefer PRs that add or modify tests; description sufficient to understand the bug.
 
-**Archive layout:** See [boost-library-context README](https://github.com/CppDigest/boost-library-context/blob/master/README.md). Layout: `{library}/issues/YYYY/YYYY-MM/#N - Title.md` and same under `pull_requests/`. Parse metadata `Closed at`, `Merged at`, `Url`. **Script:** `--archives-dir`, `--after-date YYYY-MM-DD`. Output JSONL: `library`, `issue_id`, `pr_number`, `closed_at`, `url`, `source_file`.
+Live-API access (GitHub REST/GraphQL or `gh`) is **not** required at runtime. Use it only as an optional one-time bootstrap if archives are not already available (see below).
+
+**Optional: one-time archive population (bootstrap)**  
+If the archive tree is not present, you can populate it once using the GitHub API or `gh`: list closed issues (e.g. labels `bug`; or "fix" in title/body), link to merged PRs (`Fixes #N`, `Closes #N`), and export to the same layout (`{library}/issues/YYYY/YYYY-MM/#N - Title.md`). This is a non-runtime, one-off step; the normal mining path reads from the resulting archives with `--archives-dir` and `--after-date`.
+
 
 ### 2.2 Git history analysis (after archive mining)
 
@@ -165,6 +163,6 @@ WORKDIR /workspace
 ## 7. Estimated Counts
 
 - **Target:** 100–200 high-quality issues for the first release. Prefer quality (clear repro, test, and fix) over volume.
-- **Distribution across libraries:** Aim for at least 3–5 libraries in the first batch (e.g. Beast, JSON, Algorithm, Container, Asio) with 20–50 issues each, then expand.
+- **Distribution across libraries:** Aim for 4–5 libraries in the first batch (e.g. Beast, JSON, Algorithm, Container, Asio) with 25–40 issues each, so the total stays within the 100–200 target; then expand.
 - **Difficulty distribution:** Roughly 40% easy (small, localized fix), 40% medium (multi-file or non-trivial), 20% hard (subtle or build/test changes). Adjust after mining.
 - **Validation:** Plan to mine 2–3× the target (e.g. 300–500 candidates), then filter by “buggy fails / fixed passes” and clarity to reach 100–200.

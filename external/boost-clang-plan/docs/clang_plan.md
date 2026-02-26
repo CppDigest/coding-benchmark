@@ -16,7 +16,7 @@ git clone --depth 1 https://github.com/llvm/llvm-project.git
 ### 1.2 Clang-specific directories
 
 - **Paths:** `clang/` (driver, frontend), `clang/lib/` (libraries, e.g. Basic, Lex, Parse, Sema, CodeGen), `clang/test/` (lit tests). Headers under `clang/include/clang/`.
-- **Components:** Frontend (parsing, AST), Sema (semantic analysis), CodeGen (IR generation), Driver (invocation). Use these as `component` or `category` in the dataset.
+- **Components:** Frontend (parsing, AST), Sema (semantic analysis), CodeGen (IR generation), Driver (invocation). Use these as `component` in the dataset; `category` is a separate field for bug type (e.g. regression, crash, miscompilation, diagnostic).
 
 ### 1.3 Test infrastructure (lit, FileCheck)
 
@@ -85,7 +85,7 @@ ninja -C build
 ```
 
 - **Ninja:** Use Ninja for fast incremental builds. Document the exact CMake options (e.g. `LLVM_ENABLE_PROJECTS=clang`, optional `LLVM_TARGETS_TO_BUILD=host`).
-- **Minimal build targets:** To speed iteration, build only what’s needed for the tests (e.g. `ninja clang check-clang-sema`). In the dataset, record the minimal target set (e.g. `check-clang-sema` or a specific test path) so the validation pipeline doesn’t build the entire project unnecessarily (or document a “minimal” config that still runs the chosen tests).
+- **Minimal build targets:** To speed iteration, build only what’s needed for the tests. Run from the repo root: `ninja -C build clang check-clang-sema` (or `cd build && ninja clang check-clang-sema`), matching the `cmake -B build` configure step. In the dataset, record the minimal target set (e.g. `check-clang-sema` or a specific test path) so the validation pipeline doesn’t build the entire project unnecessarily (or document a “minimal” config that still runs the chosen tests).
 
 ## 5. Dataset Format
 
@@ -102,7 +102,7 @@ Required fields:
 
 Metadata:
 
-- `category` — `frontend` | `sema` | `codegen` | `driver` (or finer)
+- `category` — bug type, orthogonal to component: e.g. `regression` | `crash` | `miscompilation` | `diagnostic` (optional)
 - `repo` — e.g. `llvm/llvm-project`
 - `difficulty` — optional
 - `lines_changed` — optional
@@ -118,7 +118,7 @@ Metadata:
   "test_file": "clang/test/Sema/cxx-sizeof.cpp",
   "build_target": "check-clang-sema",
   "repo": "llvm/llvm-project",
-  "category": "sema"
+  "category": "regression"
 }
 ```
 

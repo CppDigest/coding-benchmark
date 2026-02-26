@@ -86,7 +86,7 @@ Benchmarking requires **recent data** so that test cases are not already in the 
 | **Git** | 2.x | Clone, checkout by commit, log/blame for mining |
 | **Docker** | 20.x+ | Reproducible build and test environment |
 
-Python dependencies for scripts in `scripts/`: `requests>=2.28.0` (for archive/HTTP). Clang: Python 3 is used by **lit** (LLVM test runner); no extra pip deps for lit when using the LLVM tree.
+Python dependencies for scripts in `scripts/`: `requests>=2.28.0` (for fetching pre-built archive tarballs over HTTP during one-time setup; not for runtime GitHub/Bugzilla API calls). Clang: Python 3 is used by **lit** (LLVM test runner); no extra pip deps for lit when using the LLVM tree.
 
 ### Script templates (`scripts/`)
 
