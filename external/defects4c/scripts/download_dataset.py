@@ -176,7 +176,9 @@ def main():
         for b in bugs_list:
             commit_before = b.get("commit_before")
             commit_after = b.get("commit_after")
-            if not commit_after:
+            if not commit_after or not commit_before:
+                bug_id = f"{proj}@{commit_after or '?'}"
+                print(f"Skipping {bug_id}: missing commit_before or commit_after", file=sys.stderr)
                 continue
             bug_id = f"{proj}@{commit_after}"
             if bug_id in seen_bug_ids:
