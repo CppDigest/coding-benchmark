@@ -130,7 +130,8 @@ def main():
             # CVE URL points at the fix commit; resolve parent as buggy commit so buggy_commit != fixed_commit
             buggy_sha = get_parent_commit(proj, sha)
             if not buggy_sha:
-                buggy_sha = sha  # fallback if API fails (e.g. rate limit)
+                print(f"Skipping {bug_id}: parent commit could not be resolved", file=sys.stderr)
+                continue
             catalog["bugs"].append({
                 "bug_id": bug_id,
                 "project": proj,
