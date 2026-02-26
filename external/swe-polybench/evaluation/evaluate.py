@@ -42,10 +42,11 @@ def main() -> int:
         return 1
 
     if args.use_official and args.polybench_repo:
-        if not args.polybench_repo.is_dir():
+        repo_dir = args.polybench_repo.resolve()
+        if not repo_dir.is_dir():
             print(f"--polybench-repo is not an existing directory: {args.polybench_repo}", file=sys.stderr)
             return 1
-        run_script = args.polybench_repo / "src" / "poly_bench_evaluation" / "run_evaluation.py"
+        run_script = repo_dir / "src" / "poly_bench_evaluation" / "run_evaluation.py"
         if not run_script.is_file():
             print(f"Official evaluator not found: {run_script}", file=sys.stderr)
             return 1
@@ -62,11 +63,11 @@ def main() -> int:
             cmd.extend(["--repo-path", str(args.repo_path.resolve())])
         # subprocess.run uses shell=False; cwd and script path are operator-controlled.
         try:
-            subprocess.run(cmd, cwd=str(args.polybench_repo), check=True)
+            subprocess.run(cmd, cwd=str(repo_dir), check=True)
         except subprocess.CalledProcessError as e:
             return e.returncode
         # Official script writes result.json and prints pass rate
-        result_file = args.polybench_repo / "result.json"
+        result_file = repo_dir / "result.json"
         summary = {}
         if result_file.exists():
             try:
@@ -117,8 +118,12 @@ def main() -> int:
         "note": "Run with --use-official --polybench-repo /path/to/SWE-PolyBench for full pass-rate evaluation.",
     }
     out_summary = args.result_path / "evaluate_summary.json"
-    with open(out_summary, "w", encoding="utf-8") as f:
-        json.dump(summary, f, indent=2)
+    try:
+        with open(out_summary, "w", encoding="utf-8") as f:
+            json.dump(summary, f, indent=2)
+    except OSError as e:
+        print(f"Error writing {out_summary!r}: {e}", file=sys.stderr)
+        return 1
     print(f"Wrote {out_summary}. {len(preds)} predictions. Use --use-official for pass-rate.", file=sys.stderr)
     return 0
 
