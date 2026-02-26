@@ -162,11 +162,13 @@ def main():
             continue
         proj = name
         try:
-            r2 = requests.get(f"{BASE_URL}/{proj}/bugs_list_new.json", timeout=15)
+            url = f"{BASE_URL}/{proj}/bugs_list_new.json"
+            r2 = requests.get(url, timeout=15)
             if r2.status_code != 200:
                 continue
             bugs_list = r2.json()
-        except Exception:
+        except Exception as e:
+            print(f"Failed to fetch bugs_list_new.json for project {proj!r} ({url}): {e}", file=sys.stderr)
             continue
         if not isinstance(bugs_list, list):
             continue
