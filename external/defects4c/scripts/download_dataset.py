@@ -130,7 +130,8 @@ def main():
             # CVE URL points at the fix commit; resolve parent as buggy commit so buggy_commit != fixed_commit
             buggy_sha = get_parent_commit(proj, sha)
             if not buggy_sha:
-                buggy_sha = sha  # fallback if API fails (e.g. rate limit)
+                print(f"Skipping {bug_id}: parent commit could not be resolved", file=sys.stderr)
+                continue
             catalog["bugs"].append({
                 "bug_id": bug_id,
                 "project": proj,
@@ -162,18 +163,22 @@ def main():
             continue
         proj = name
         try:
-            r2 = requests.get(f"{BASE_URL}/{proj}/bugs_list_new.json", timeout=15)
+            url = f"{BASE_URL}/{proj}/bugs_list_new.json"
+            r2 = requests.get(url, timeout=15)
             if r2.status_code != 200:
                 continue
             bugs_list = r2.json()
-        except Exception:
+        except Exception as e:
+            print(f"Failed to fetch bugs_list_new.json for project {proj!r} ({url}): {e}", file=sys.stderr)
             continue
         if not isinstance(bugs_list, list):
             continue
         for b in bugs_list:
             commit_before = b.get("commit_before")
             commit_after = b.get("commit_after")
-            if not commit_after:
+            if not commit_after or not commit_before:
+                bug_id = f"{proj}@{commit_after or '?'}"
+                print(f"Skipping {bug_id}: missing commit_before or commit_after", file=sys.stderr)
                 continue
             bug_id = f"{proj}@{commit_after}"
             if bug_id in seen_bug_ids:

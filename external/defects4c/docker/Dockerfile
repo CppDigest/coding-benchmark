@@ -1,5 +1,7 @@
 # Defects4C evaluation environment (Child Issue 2).
-# Build: docker build -t defects4c-env .
+# Build (context must be external/defects4c so COPY scripts/, data/, evaluation/ exist):
+#   From external/defects4c:  docker build -t defects4c-env -f docker/Dockerfile .
+#   From repo root:           docker build -f external/defects4c/docker/Dockerfile -t defects4c-env external/defects4c
 # Run:   docker run --rm -it -v "$(pwd)/../repos:/repos" defects4c-env bash
 # Then:  python /app/scripts/checkout_bug.py --bug-id PROJECT@SHA --work-dir /repos
 #       python /app/evaluation/run_tests.py --bug-id PROJECT@SHA --work-dir /repos
@@ -19,7 +21,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN pip3 install --no-cache-dir requests
 
 # App layout: /app = defects4c wrapper (scripts, data, evaluation)
-# Build from repo root: docker build -f external/defects4c/docker/Dockerfile external/defects4c
 WORKDIR /app
 COPY scripts /app/scripts/
 COPY data /app/data/
