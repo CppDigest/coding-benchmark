@@ -8,12 +8,12 @@ pass/fail metrics. Can run in two modes:
    outputs a results JSON with structure compatible with SWE-bench metrics.
    Does not run Docker or real tests; use for CI or when full harness is unavailable.
 
-2. With SWE-bench harness: if swebench package is installed and --harness is set,
-   delegates to the official harness for execution-based evaluation (optional).
+2. --harness: when set, only prints guidance for using the official SWE-bench
+   harness; evaluation still uses standalone (patch-comparison) mode.
 
 Usage:
   python run_evaluation.py --predictions_path predictions.jsonl --output_dir results/
-  python run_evaluation.py --predictions_path predictions.jsonl --harness  # if swebench installed
+  python run_evaluation.py --predictions_path predictions.jsonl --harness  # prints harness usage guidance
 """
 import argparse
 import json
