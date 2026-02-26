@@ -21,7 +21,7 @@ python external/swe-bench-multilingual/scripts/filter_cpp.py
 python external/swe-bench-multilingual/evaluation/run_evaluation.py --predictions_path <path> --output_dir <dir>
 ```
 
-Output: `external/swe-bench-multilingual/data/raw/manifest.json` and parquet split(s); C/C++ subset in `data/cpp_issues.jsonl` after step 3.
+Output: `external/swe-bench-multilingual/data/raw/manifest.json` and parquet split(s); C/C++ subset in `external/swe-bench-multilingual/data/cpp_issues.jsonl` after step 3.
 
 ## Layout
 

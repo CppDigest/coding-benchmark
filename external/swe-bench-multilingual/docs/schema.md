@@ -11,7 +11,7 @@ Source: `data/raw/*.parquet` (produced by `scripts/download.py` from Hugging Fac
 | Field | Type | Description |
 |-------|------|--------------|
 | `repo` | string | Repository identifier `owner/name` (e.g. `redis/redis`). |
-| `instance_id` | string | Unique instance id: `owner__repo-issue_number`. |
+| `instance_id` | string | Unique instance id: `owner__repo-pr_number` (official format). |
 | `base_commit` | string | Git commit hash of the repo in the pre-solution (buggy) state. |
 | `patch` | string | Gold patch (unified diff) that fixes the issue. |
 | `test_patch` | string | Optional patch or metadata related to tests. |
@@ -30,7 +30,7 @@ File: `data/cpp_issues.jsonl`. One JSON object per line. Produced by `scripts/fi
 
 | Field | Type | Description |
 |-------|------|--------------|
-| `instance_id` | string | Same as raw: `owner__repo-issue_number`. |
+| `instance_id` | string | Same as raw: `owner__repo-pr_number` (official format). |
 | `repo_url` | string | Full GitHub URL: `https://github.com/{owner}/{name}`. |
 | `repo` | string | Repository `owner/name`. |
 | `commit_base` | string | Same as raw `base_commit`: repo state to patch. |
