@@ -1,2 +1,0 @@
-# BugSwarm API and scripts (external/bugswarm)
-bugswarm-common>=2.0.0

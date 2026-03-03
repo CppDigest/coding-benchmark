@@ -1,2 +1,0 @@
-# SWE-PolyBench download (external/swe-polybench)
-datasets>=2.14.0
