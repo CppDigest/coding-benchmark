@@ -24,6 +24,14 @@ import sys
 from pathlib import Path
 
 
+def positive_int(value: str) -> int:
+    """Argparse type: require a positive integer."""
+    n = int(value)
+    if n <= 0:
+        raise argparse.ArgumentTypeError(f"{value!r} is not a positive integer")
+    return n
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="SWE-PolyBench evaluation: accuracy/pass-rate")
     parser.add_argument("--dataset-path", type=Path, required=True, help="Path to dataset JSONL (e.g. polybench_500.jsonl)")
@@ -31,7 +39,7 @@ def main() -> int:
     parser.add_argument("--result-path", type=Path, required=True, help="Directory for instance-level results and summary")
     parser.add_argument("--use-official", action="store_true", help="Run official SWE-PolyBench run_evaluation.py (requires --polybench-repo)")
     parser.add_argument("--polybench-repo", type=Path, default=None, help="Path to cloned amazon-science/SWE-PolyBench repo for official eval")
-    parser.add_argument("--num-threads", type=int, default=1, help="Threads for official evaluator")
+    parser.add_argument("--num-threads", type=positive_int, default=1, help="Threads for official evaluator (must be >= 1)")
     parser.add_argument("--repo-path", type=Path, default=None, help="Repository path passed to official evaluator (optional)")
     args = parser.parse_args()
 

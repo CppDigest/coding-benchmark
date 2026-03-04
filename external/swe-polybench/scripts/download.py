@@ -22,6 +22,24 @@ import sys
 from pathlib import Path
 
 
+REQUIRED_ROW_KEYS = (
+    "language",
+    "repo",
+    "problem_statement",
+    "test_command",
+    "patch",
+    "instance_id",
+    "base_commit",
+)
+
+
+def _empty(val) -> bool:
+    """True if value is missing or empty (None, empty string, or whitespace-only)."""
+    if val is None:
+        return True
+    return str(val).strip() == ""
+
+
 def row_to_record(row, columns: list) -> dict:
     """Convert a dataset row to our JSONL record with required fields."""
     d = {}
@@ -32,22 +50,24 @@ def row_to_record(row, columns: list) -> dict:
         if hasattr(v, "tolist"):  # numpy etc.
             v = v.tolist()
         d[col] = v
-    # Ensure required fields for acceptance criteria
+    missing = [k for k in REQUIRED_ROW_KEYS if k not in d or _empty(d[k])]
+    if missing:
+        raise ValueError(f"Row missing or empty required keys: {missing}")
     out = {
-        "language": d.get("language", ""),
-        "repo": d.get("repo", ""),
-        "issue_text": d.get("problem_statement", ""),
-        "test_cmd": d.get("test_command", ""),
-        "expected_patch": d.get("patch", ""),
+        "language": d["language"],
+        "repo": d["repo"],
+        "issue_text": d["problem_statement"],
+        "test_cmd": d["test_command"],
+        "expected_patch": d["patch"],
     }
-    out["instance_id"] = d.get("instance_id", "")
-    out["base_commit"] = d.get("base_commit", "")
+    out["instance_id"] = d["instance_id"]
+    out["base_commit"] = d["base_commit"]
     out["F2P"] = d.get("F2P", "")
     out["P2P"] = d.get("P2P", "")
     out["task_category"] = d.get("task_category", "")
-    out["patch"] = d.get("patch", "")
-    out["problem_statement"] = d.get("problem_statement", "")
-    out["test_command"] = d.get("test_command", "")
+    out["patch"] = d["patch"]
+    out["problem_statement"] = d["problem_statement"]
+    out["test_command"] = d["test_command"]
     if "Dockerfile" in d:
         out["Dockerfile"] = d["Dockerfile"]
     return out
@@ -93,9 +113,16 @@ def main() -> int:
     records = [row_to_record(ds[i], columns) for i in range(len(ds))]
     print(f"Loaded {len(records)} instances.", file=sys.stderr)
 
-    with open(path_500, "w", encoding="utf-8") as f:
-        for r in records:
-            f.write(json.dumps(r, ensure_ascii=False) + "\n")
+    try:
+        with open(path_500, "w", encoding="utf-8") as f:
+            for r in records:
+                f.write(json.dumps(r, ensure_ascii=False) + "\n")
+    except Exception as e:
+        print(
+            f"Failed to write {path_500} ({len(records)} records): {e}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
     print(f"Wrote {path_500} ({len(records)} instances).", file=sys.stderr)
     return 0
 
