@@ -1,0 +1,120 @@
+#!/usr/bin/env python3
+"""
+Template: Extract bug-fix commit pairs from git history.
+
+Fill in:
+  - REPO_PATH (or --repo CLI)
+  - Commit message patterns (e.g. "Fix", "Fixes", "Resolve")
+  - Logic to get parent commit = buggy, current = fixed
+  - Optional: run test at parent vs current to verify fail→pass
+
+Usage (example after implementation):
+  python extract_bug_fixes.py.template --repo /path/to/boost --since 2020-01-01 --output pairs.jsonl
+  python extract_bug_fixes.py.template --repo /path/to/llvm-project --path clang/ --output clang_pairs.jsonl
+
+Requires: Git (subprocess or GitPython).
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+# -----------------------------------------------------------------------------
+# Placeholders: commit message patterns (regex or substrings)
+# -----------------------------------------------------------------------------
+FIX_PATTERNS = [
+    r"\bFix(es)?\s+#?\d+",   # Fix #123, Fixes #123
+    r"\bFix\s+",             # Fix PR12345, Fix crash in ...
+    r"\bResolve(s)?\s+",
+    r"\bCorrect(s)?\s+",
+]
+# Optional: restrict to paths (e.g. libs/beast for Boost, clang/ for Clang)
+SCOPE_PATH = None  # e.g. "libs/beast" or "clang/"
+
+
+def parse_args() -> argparse.Namespace:
+    p = argparse.ArgumentParser(description="Extract bug-fix commit pairs from git history.")
+    p.add_argument("--repo", type=str, required=True, help="Path to git repo")
+    p.add_argument("--path", type=str, default=None, help="Limit to path (e.g. libs/beast or clang/)")
+    p.add_argument("--since", type=str, default=None, help="Git date, e.g. 2020-01-01")
+    p.add_argument("--patterns", type=str, nargs="*", default=None, help="Override fix patterns (grep-style)")
+    p.add_argument("--max-commits", type=int, default=2000, help="Max commits to scan")
+    p.add_argument("--output", type=str, default="bug_fix_pairs.jsonl", help="Output JSONL path")
+    return p.parse_args()
+
+
+def git_log_oneline(repo: Path, path: str | None, since: str | None, max_count: int) -> list[str]:
+    """Run git log --oneline and return lines 'sha subject'."""
+    cmd = ["git", "-C", str(repo), "log", "--oneline", f"-n{max_count}"]
+    if since:
+        cmd.extend(["--since", since])
+    if path:
+        cmd.append("--")
+        cmd.append(path)
+    out = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    if out.returncode != 0:
+        return []
+    return out.stdout.strip().split("\n") if out.stdout else []
+
+
+def message_matches(subject: str, patterns: list[str]) -> bool:
+    """Return True if subject matches any of the patterns."""
+    for pat in patterns:
+        if re.search(pat, subject, re.I):
+            return True
+    return False
+
+
+def collect_pairs(repo: Path, path: str | None, since: str | None, patterns: list[str], max_commits: int) -> list[dict]:
+    """
+    Collect (buggy_commit, fixed_commit) pairs.
+    fixed_commit = commit with matching message; buggy_commit = its parent.
+    """
+    lines = git_log_oneline(repo, path, since, max_commits)
+    pairs = []
+    for line in lines:
+        if not line:
+            continue
+        parts = line.split(None, 1)
+        if len(parts) < 2:
+            continue
+        sha, subject = parts[0], parts[1]
+        if not message_matches(subject, patterns):
+            continue
+        # Parent = buggy, current = fixed
+        parent_cmd = ["git", "-C", str(repo), "rev-parse", f"{sha}^"]
+        parent_out = subprocess.run(parent_cmd, capture_output=True, text=True, check=False)
+        if parent_out.returncode != 0:
+            continue
+        parent_sha = parent_out.stdout.strip()
+        pairs.append({
+            "fixed_commit": sha,
+            "buggy_commit": parent_sha,
+            "subject": subject,
+        })
+    return pairs
+
+
+def main() -> int:
+    args = parse_args()
+    repo = Path(args.repo)
+    if not (repo / ".git").exists():
+        print(f"Not a git repo: {repo}", file=sys.stderr)
+        return 1
+    path = args.path or SCOPE_PATH
+    patterns = args.patterns or FIX_PATTERNS
+    pairs = collect_pairs(repo, path, args.since, patterns, args.max_commits)
+    with open(args.output, "w", encoding="utf-8") as f:
+        for p in pairs:
+            f.write(json.dumps(p, ensure_ascii=False) + "\n")
+    print(f"Wrote {len(pairs)} pairs to {args.output}", file=sys.stderr)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
