@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shlex
 import subprocess
 import sys
 
@@ -28,17 +29,21 @@ def _run_cmd(cmd: str, cwd: str, trusted: bool, label: str) -> int:
     if not cmd:
         print(f"{label} command is empty", file=sys.stderr)
         return 1
-    if trusted:
-        # Trusted mode: allow shell=True but still enforce a timeout.
-        result = subprocess.run(cmd, shell=True, cwd=cwd, timeout=DEFAULT_TIMEOUT)
+    try:
+        if trusted:
+            # Trusted mode: allow shell=True but still enforce a timeout.
+            result = subprocess.run(cmd, shell=True, cwd=cwd, timeout=DEFAULT_TIMEOUT)
+            return result.returncode
+        # Default: run with shell=False using shlex.split for quoted args.
+        argv = shlex.split(cmd)
+        if not argv:
+            print(f"{label} command is empty after parsing", file=sys.stderr)
+            return 1
+        result = subprocess.run(argv, cwd=cwd, timeout=DEFAULT_TIMEOUT)
         return result.returncode
-    # Default: run with shell=False using a simple whitespace split.
-    argv = cmd.split()
-    if not argv:
-        print(f"{label} command is empty after parsing", file=sys.stderr)
-        return 1
-    result = subprocess.run(argv, cwd=cwd, timeout=DEFAULT_TIMEOUT)
-    return result.returncode
+    except subprocess.TimeoutExpired:
+        print(f"{label} timed out after {DEFAULT_TIMEOUT}s", file=sys.stderr)
+        return 124
 
 
 def main() -> None:

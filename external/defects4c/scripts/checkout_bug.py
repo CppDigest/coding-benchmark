@@ -108,12 +108,12 @@ def main():
 
     repo_url = get_repo_url(catalog, project_raw)
     if not repo_url and args.repo_url:
-        if not is_valid_repo_url(args.repo_url):
-            print("Invalid --repo-url: must be an https://, http://, or git@ URL", file=sys.stderr)
-            sys.exit(1)
         repo_url = args.repo_url.strip()
     if not repo_url:
         print(f"No repo_url for project '{project}' (not in catalog projects_info). Use --repo-url URL for PROJECT@SHA.", file=sys.stderr)
+        sys.exit(1)
+    if not is_valid_repo_url(repo_url):
+        print("Invalid repo_url: only https:// or git@ URLs are allowed.", file=sys.stderr)
         sys.exit(1)
 
     if not os.path.isdir(os.path.join(project_dir, ".git")):
