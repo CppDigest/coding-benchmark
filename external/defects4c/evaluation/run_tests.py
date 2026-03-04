@@ -65,16 +65,20 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    load_err = None
     try:
         catalog = load_catalog(data_dir)
         bug = find_bug(catalog, args.bug_id)
-    except (FileNotFoundError, OSError, json.JSONDecodeError):
+    except (FileNotFoundError, OSError, json.JSONDecodeError) as load_err:
         bug = None
     if not bug and "@" in args.bug_id:
         project = args.bug_id.split("@", 1)[0]
         # No build_cmd default; catalog or user must provide. test_cmd fallback is best-effort.
         bug = {"bug_id": args.bug_id, "project": project, "test_cmd": "make check", "build_cmd": ""}
     if not bug:
+        if load_err is not None:
+            print(f"Catalog load failed: {load_err}", file=sys.stderr)
+            sys.exit(1)
         print(f"Bug not found: {args.bug_id}", file=sys.stderr)
         sys.exit(1)
 
@@ -96,7 +100,11 @@ def main() -> None:
         print(f"Project dir not found: {project_dir}. Run checkout_bug.py first.", file=sys.stderr)
         sys.exit(1)
 
-    build_cmd = (bug.get("build_cmd") or "").strip()
+    raw_build = bug.get("build_cmd")
+    if raw_build is None or str(raw_build).strip() == "":
+        build_cmd = ""
+    else:
+        build_cmd = str(raw_build).strip()
     raw = bug.get("test_cmd")
     if raw is None or (str(raw).strip() == ""):
         test_cmd = "make check"

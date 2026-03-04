@@ -96,8 +96,8 @@ def main():
             sys.exit(1)
 
     project_raw = bug.get("project")
-    if not project_raw:
-        print("Catalog entry missing 'project'", file=sys.stderr)
+    if not isinstance(project_raw, str) or not project_raw.strip():
+        print("Catalog entry missing or invalid 'project' (must be a non-empty string).", file=sys.stderr)
         sys.exit(1)
     try:
         project = sanitize_project(project_raw)
