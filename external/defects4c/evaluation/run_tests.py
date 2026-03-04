@@ -2,7 +2,7 @@
 """
 Run tests for a Defects4C bug.
 Usage: python run_tests.py --bug-id PROJECT@SHA [--work-dir DIR] [--build-first] [--trusted]
-Uses test_cmd from bug_catalog.json; if empty, tries default (make check / ctest).
+Uses test_cmd from bug_catalog.json; if empty, uses default (make check).
 """
 from __future__ import annotations
 
@@ -44,6 +44,9 @@ def _run_cmd(cmd: str, cwd: str, trusted: bool, label: str) -> int:
     except subprocess.TimeoutExpired:
         print(f"{label} timed out after {DEFAULT_TIMEOUT}s", file=sys.stderr)
         return 124
+    except (FileNotFoundError, OSError) as e:
+        print(f"{label} failed to start: {e}", file=sys.stderr)
+        return 127
 
 
 def main() -> None:

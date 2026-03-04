@@ -40,6 +40,18 @@ def sanitize_project(project: str) -> str:
     return name
 
 
+def run_git(cmd_args: list[str], cwd: str, timeout: int = 300) -> None:
+    """Run git with the given args; on timeout or non-zero exit, print message and exit 1."""
+    try:
+        subprocess.run(["git"] + cmd_args, check=True, cwd=cwd, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        print(f"git {' '.join(cmd_args[:2])}... timed out after {timeout}s", file=sys.stderr)
+        sys.exit(1)
+    except subprocess.CalledProcessError as e:
+        print(f"git {' '.join(cmd_args[:2])}... failed: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
 def main():
     script_dir = os.path.dirname(os.path.abspath(__file__))
     base_dir = os.path.dirname(script_dir)
@@ -55,8 +67,12 @@ def main():
     if args.repo_url is not None:
         args.repo_url = args.repo_url.strip() or None
 
-    catalog = load_catalog(data_dir)
-    bug = find_bug(catalog, args.bug_id)
+    try:
+        catalog = load_catalog(data_dir)
+        bug = find_bug(catalog, args.bug_id)
+    except (FileNotFoundError, OSError, json.JSONDecodeError):
+        catalog = {}
+        bug = None
     if not bug:
         # If bug_id looks like project@sha, use it directly
         if "@" in args.bug_id:
@@ -118,12 +134,12 @@ def main():
 
     if not os.path.isdir(os.path.join(project_dir, ".git")):
         print(f"Cloning {project}...")
-        subprocess.run(["git", "clone", repo_url, project_dir], check=True, cwd=work_dir)
+        run_git(["clone", repo_url, project_dir], work_dir)
     else:
         print(f"Fetching {project}...")
-        subprocess.run(["git", "fetch", "origin"], check=True, cwd=project_dir)
+        run_git(["fetch", "origin"], project_dir)
 
-    subprocess.run(["git", "checkout", commit], check=True, cwd=project_dir)
+    run_git(["checkout", commit], project_dir)
     print(f"Checked out {project} at {commit} ({'fixed' if args.fixed else 'buggy'})")
     print(f"Work dir: {project_dir}")
 
