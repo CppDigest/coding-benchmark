@@ -76,14 +76,15 @@ def main() -> int:
             return e.returncode
         # Official script writes result.json under args.result_path
         result_file = args.result_path / "result.json"
-        summary = {}
-        if result_file.exists():
-            try:
-                with open(result_file, encoding="utf-8") as f:
-                    summary = json.load(f)
-            except (json.JSONDecodeError, OSError) as e:
-                print(f"Error reading {result_file!r}: {e}", file=sys.stderr)
-                summary = {"pass_rate": None}
+        if not result_file.exists():
+            print(f"Result file not found: {result_file!r}", file=sys.stderr)
+            return 1
+        try:
+            with open(result_file, encoding="utf-8") as f:
+                summary = json.load(f)
+        except (json.JSONDecodeError, OSError) as e:
+            print(f"Error reading {result_file!r}: {e}", file=sys.stderr)
+            return 1
         print("Pass rate / resolved:", summary.get("pass_rate"), summary.get("resolved", ""))
         return 0
 
@@ -108,6 +109,8 @@ def main() -> int:
         with open(args.predictions_path, encoding="utf-8") as f:
             preds = [json.loads(line) for line in f if line.strip()]
         for p in preds:
+            if not isinstance(p, dict):
+                continue
             if "model_patch" not in p and "patch" in p:
                 p["model_patch"] = p["patch"]
     except OSError as e:
