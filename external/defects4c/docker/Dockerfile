@@ -2,7 +2,7 @@
 # Build (context must be external/defects4c so COPY scripts/, data/, evaluation/ exist):
 #   From external/defects4c:  docker build -t defects4c-env -f docker/Dockerfile .
 #   From repo root:           docker build -f external/defects4c/docker/Dockerfile -t defects4c-env external/defects4c
-# Run:   docker run --rm -it -v "$(pwd)/../repos:/repos" defects4c-env bash
+# Run:   docker run --rm -it -v "$(pwd)/repos:/repos" defects4c-env bash
 # Then:  python /app/scripts/checkout_bug.py --bug-id PROJECT@SHA --work-dir /repos
 #       python /app/evaluation/run_tests.py --bug-id PROJECT@SHA --work-dir /repos
 
@@ -29,6 +29,12 @@ COPY evaluation /app/evaluation/
 # Default work dir for cloned repos (mount at run time)
 ENV DEFECTS4C_WORK_DIR=/repos
 RUN mkdir -p "$DEFECTS4C_WORK_DIR"
+
+# Create a non-root user to run the evaluation to reduce blast radius.
+RUN groupadd -g 1000 defects4c && useradd -m -u 1000 -g defects4c defects4c
+RUN chown -R defects4c:defects4c /app "$DEFECTS4C_WORK_DIR"
+ENV HOME=/home/defects4c
+USER defects4c
 
 WORKDIR /app
 CMD ["bash"]

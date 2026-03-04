@@ -30,7 +30,7 @@ if command -v python3 &>/dev/null; then
   DOWNLOAD_SCRIPT="$SCRIPT_DIR/download_dataset.py"
   if [ -f "$DOWNLOAD_SCRIPT" ]; then
     echo "Fetching full Defects4C bug list from GitHub..."
-    python3 "$DOWNLOAD_SCRIPT" || true
+    python3 "$DOWNLOAD_SCRIPT"
   fi
 fi
 

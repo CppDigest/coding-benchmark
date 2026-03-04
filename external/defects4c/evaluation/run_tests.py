@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Run tests for a Defects4C bug.
-Usage: python run_tests.py --bug-id PROJECT@SHA [--work-dir DIR] [--build-first]
+Usage: python run_tests.py --bug-id PROJECT@SHA [--work-dir DIR] [--build-first] [--trusted]
 Uses test_cmd from bug_catalog.json; if empty, tries default (make check / ctest).
 """
 from __future__ import annotations
@@ -12,33 +12,36 @@ import os
 import subprocess
 import sys
 
-# Reuse validation from checkout_bug to avoid path traversal and keep logic in one place
+# Reuse validation from checkout_bug to avoid path traversal and keep logic in one place.
 _defects4c_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _scripts_dir = os.path.join(_defects4c_root, "scripts")
 if _scripts_dir not in sys.path:
     sys.path.insert(0, _scripts_dir)
 from checkout_bug import sanitize_project
+from catalog import load_catalog, find_bug
 
-def load_catalog(data_dir: str) -> dict:
-    path = os.path.join(data_dir, "bug_catalog.json")
-    if not os.path.isfile(path):
-        raise FileNotFoundError(f"Catalog not found: {path}. Run setup.sh first.")
-    with open(path, encoding="utf-8") as f:
-        return json.load(f)
+DEFAULT_TIMEOUT = 60
 
 
-def find_bug(catalog: dict, bug_id: str) -> dict | None:
-    for b in catalog.get("bugs", []):
-        if b.get("bug_id") == bug_id:
-            return b
-        # Short form: PROJECT-1, PROJECT-2, ... (per-project 1-based index from catalog)
-        short = f"{b.get('project')}-{b.get('version', '')}".rstrip("-")
-        if short == bug_id:
-            return b
-    return None
+def _run_cmd(cmd: str, cwd: str, trusted: bool, label: str) -> int:
+    """Run a build or test command with optional shell=True and a timeout."""
+    if not cmd:
+        print(f"{label} command is empty", file=sys.stderr)
+        return 1
+    if trusted:
+        # Trusted mode: allow shell=True but still enforce a timeout.
+        result = subprocess.run(cmd, shell=True, cwd=cwd, timeout=DEFAULT_TIMEOUT)
+        return result.returncode
+    # Default: run with shell=False using a simple whitespace split.
+    argv = cmd.split()
+    if not argv:
+        print(f"{label} command is empty after parsing", file=sys.stderr)
+        return 1
+    result = subprocess.run(argv, cwd=cwd, timeout=DEFAULT_TIMEOUT)
+    return result.returncode
 
 
-def main():
+def main() -> None:
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     data_dir = os.path.join(base_dir, "data")
     default_work_dir = os.path.join(base_dir, "repos")
@@ -47,6 +50,11 @@ def main():
     parser.add_argument("--bug-id", required=True, help="Bug ID, e.g. libxml2@commit_sha or PROJECT-1")
     parser.add_argument("--work-dir", default=default_work_dir, help="Parent directory for project clones")
     parser.add_argument("--build-first", action="store_true", help="Run build_cmd before test_cmd")
+    parser.add_argument(
+        "--trusted",
+        action="store_true",
+        help="Allow executing catalog build_cmd/test_cmd with shell=True; otherwise run with shell=False and a timeout.",
+    )
     args = parser.parse_args()
 
     catalog = load_catalog(data_dir)
@@ -82,15 +90,16 @@ def main():
 
     if args.build_first and build_cmd:
         print("Building:", build_cmd)
-        rc = subprocess.run(build_cmd, shell=True, cwd=project_dir)
-        if rc.returncode != 0:
+        rc = _run_cmd(build_cmd, project_dir, args.trusted, "Build")
+        if rc != 0:
             print("Build failed", file=sys.stderr)
-            sys.exit(rc.returncode)
+            sys.exit(rc)
 
     print("Running tests:", test_cmd)
-    rc = subprocess.run(test_cmd, shell=True, cwd=project_dir)
-    sys.exit(rc.returncode)
+    rc = _run_cmd(test_cmd, project_dir, args.trusted, "Test")
+    sys.exit(rc)
 
 
 if __name__ == "__main__":
     main()
+

@@ -18,23 +18,7 @@ import sys
 SAFE_PROJECT_PATTERN = re.compile(r"^[a-zA-Z0-9_.-]+$")
 
 
-def load_catalog(data_dir: str) -> dict:
-    path = os.path.join(data_dir, "bug_catalog.json")
-    if not os.path.isfile(path):
-        raise FileNotFoundError(f"Catalog not found: {path}. Run setup.sh first.")
-    with open(path, encoding="utf-8") as f:
-        return json.load(f)
-
-
-def find_bug(catalog: dict, bug_id: str) -> dict | None:
-    for b in catalog.get("bugs", []):
-        if b.get("bug_id") == bug_id:
-            return b
-        # Short form: PROJECT-1, PROJECT-2, ... (per-project 1-based index from catalog)
-        short = f"{b.get('project')}-{b.get('version', '')}".rstrip("-")
-        if short == bug_id:
-            return b
-    return None
+from catalog import load_catalog, find_bug
 
 
 def get_repo_url(catalog: dict, project: str) -> str | None:
@@ -43,9 +27,9 @@ def get_repo_url(catalog: dict, project: str) -> str | None:
 
 
 def is_valid_repo_url(url: str) -> bool:
-    """Accept https://, http://, or git@ URLs."""
+    """Accept https:// or git@ URLs (no plain http://)."""
     u = url.strip()
-    return bool(u and (u.startswith("http://") or u.startswith("https://") or u.startswith("git@")))
+    return bool(u and (u.startswith("https://") or u.startswith("git@")))
 
 
 def sanitize_project(project: str) -> str:
@@ -109,6 +93,10 @@ def main():
         if not commit:
             print("Catalog entry missing buggy_commit", file=sys.stderr)
             sys.exit(1)
+    # Validate that commit looks like a Git SHA (7-40 hex chars) before checkout.
+    if not re.fullmatch(r"[0-9a-fA-F]{7,40}", str(commit)):
+        print(f"Invalid commit SHA in catalog for bug_id={bug.get('bug_id')!r}: {commit!r}", file=sys.stderr)
+        sys.exit(1)
 
     work_dir = os.path.abspath(args.work_dir)
     os.makedirs(work_dir, exist_ok=True)
