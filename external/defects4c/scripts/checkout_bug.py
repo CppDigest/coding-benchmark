@@ -50,6 +50,12 @@ def run_git(cmd_args: list[str], cwd: str, timeout: int = 300) -> None:
     except subprocess.CalledProcessError as e:
         print(f"git {' '.join(cmd_args[:2])}... failed: {e}", file=sys.stderr)
         sys.exit(1)
+    except FileNotFoundError as e:
+        print(f"git ...: not found or not executable: {e}", file=sys.stderr)
+        sys.exit(1)
+    except OSError as e:
+        print(f"git ...: {e}", file=sys.stderr)
+        sys.exit(1)
 
 
 def main():

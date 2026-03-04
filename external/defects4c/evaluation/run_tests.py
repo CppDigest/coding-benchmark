@@ -65,8 +65,11 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    catalog = load_catalog(data_dir)
-    bug = find_bug(catalog, args.bug_id)
+    try:
+        catalog = load_catalog(data_dir)
+        bug = find_bug(catalog, args.bug_id)
+    except (FileNotFoundError, OSError, json.JSONDecodeError):
+        bug = None
     if not bug and "@" in args.bug_id:
         project = args.bug_id.split("@", 1)[0]
         # No build_cmd default; catalog or user must provide. test_cmd fallback is best-effort.
@@ -94,7 +97,11 @@ def main() -> None:
         sys.exit(1)
 
     build_cmd = (bug.get("build_cmd") or "").strip()
-    test_cmd = (bug.get("test_cmd") or "make check").strip()
+    raw = bug.get("test_cmd")
+    if raw is None or (str(raw).strip() == ""):
+        test_cmd = "make check"
+    else:
+        test_cmd = str(raw).strip()
 
     if args.build_first and build_cmd:
         print("Building:", build_cmd)
