@@ -1,0 +1,7 @@
+[
+  {"image_tag": "repo1-1", "repo": "owner/repo1", "lang": "Java", "build_system": "Maven", "reproduce_successes": 1, "failed_job": {"job_id": "1", "trigger_sha": "a"}, "passed_job": {"job_id": "2", "trigger_sha": "b"}},
+  {"image_tag": "repo2-1", "repo": "owner/repo2", "lang": "Java", "build_system": "Gradle", "reproduce_successes": 2, "failed_job": {"job_id": "3"}, "passed_job": {"job_id": "4"}},
+  {"image_tag": "repo3-1", "repo": "owner/repo3", "lang": "Python", "build_system": "pip", "reproduce_successes": 1, "failed_job": {"job_id": "5"}, "passed_job": {"job_id": "6"}},
+  {"image_tag": "repo4-1", "repo": "owner/repo4", "lang": "Java", "build_system": "Maven", "reproduce_successes": 1, "failed_job": {"job_id": "7"}, "passed_job": {"job_id": "8"}},
+  {"image_tag": "repo5-1", "repo": "owner/repo5", "lang": "Python", "build_system": "NA", "reproduce_successes": 1, "failed_job": {"job_id": "9"}, "passed_job": {"job_id": "10"}}
+]
