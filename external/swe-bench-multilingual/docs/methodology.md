@@ -106,7 +106,7 @@ After setup, run scripts with the venv activated so that `python` and `pip` refe
 | **DATE_SELECTED** | YYYY-MM-DD |
 | **DOWNLOADED_BY** | (your name) |
 
-**How to obtain and use a revision:** Open [SWE-bench/SWE-bench_Multilingual](https://huggingface.co/datasets/SWE-bench/SWE-bench_Multilingual) on Hugging Face → **Files and versions** or **History** → copy the full commit hash. Run the download script with that revision (from repo root, venv activated): `python external\swe-bench-multilingual\scripts\download.py --revision <commit_hash>`.
+**How to obtain and use a revision:** Open [SWE-bench/SWE-bench_Multilingual](https://huggingface.co/datasets/SWE-bench/SWE-bench_Multilingual) on Hugging Face → **Files and versions** or **History** → copy the full commit hash. Run the download script with that revision (from repo root, venv activated): `python external/swe-bench-multilingual/scripts/download.py --revision <commit_hash>`.
 
 ### Environment assumptions
 
@@ -117,7 +117,7 @@ After setup, run scripts with the venv activated so that `python` and `pip` refe
 
 ### Determinism guarantees
 
-- **Download:** For a given `--revision`, `load_dataset(... revision=args.revision)` returns the same data. Parquet files and manifest are deterministic for that revision.
+- **Download:** For a given `--revision`, `load_dataset(... revision=args.revision)` returns the same data. Parquet files are deterministic for that revision; the manifest is deterministic except for runtime metadata fields such as `downloaded_at_utc`.
 - **Dataset authors:** Any determinism guarantees of the benchmark (e.g. test order, container image) are documented by the SWE-bench project; we rely on their evaluation harness and container setup for run-to-run consistency when running evaluations (out of scope for Child Issue 1).
 
 ---

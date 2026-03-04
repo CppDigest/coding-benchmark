@@ -19,7 +19,7 @@ except ImportError:
 
 # File extensions that indicate C/C++ in a diff path (exclude .ch, .ts, .cs, .html, etc.)
 CPP_EXT_RE = re.compile(
-    r"\.(c|cc|cpp|cxx|h|hpp|hxx)\b",
+    r"\.(c|cc|cpp|cxx|h|hh|hpp|hxx)\b",
     re.IGNORECASE,
 )
 

@@ -25,12 +25,25 @@ def load_cpp_issues(data_path: str) -> dict[str, dict]:
     """Load data/cpp_issues.jsonl into instance_id -> record."""
     issues = {}
     with open(data_path, encoding="utf-8") as f:
-        for line in f:
+        for lineno, line in enumerate(f, start=1):
             line = line.strip()
             if not line:
                 continue
             rec = json.loads(line)
-            issues[rec["instance_id"]] = rec
+            instance_id = rec.get("instance_id")
+            if instance_id is None:
+                print(
+                    f"Error: missing instance_id in cpp_issues record at {data_path}:{lineno}",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            if instance_id in issues:
+                print(
+                    f\"Error: duplicate instance_id {instance_id!r} in cpp_issues file {data_path} at line {lineno}\",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            issues[instance_id] = rec
     return issues
 
 
@@ -69,10 +82,16 @@ def run_standalone_evaluation(
     issues = load_cpp_issues(cpp_issues_path)
     preds = load_predictions(predictions_path)
 
-    instance_results = []
-    resolved = 0
+    # Deduplicate predictions by instance_id so each instance is evaluated once.
+    # If multiple rows share the same instance_id, the last occurrence wins.
+    pred_map: dict[str, dict] = {}
     for p in preds:
         iid = p.get("instance_id")
+        pred_map[iid] = p
+
+    instance_results = []
+    resolved = 0
+    for iid, p in pred_map.items():
         patch = p.get("model_patch") or ""
         if iid not in issues:
             instance_results.append({
