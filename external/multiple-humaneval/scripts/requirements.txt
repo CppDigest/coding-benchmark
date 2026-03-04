@@ -1,2 +1,0 @@
-# MultiPL-E / HumanEval download (external/multiple-humaneval)
-datasets>=2.14.0
