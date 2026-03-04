@@ -47,12 +47,16 @@ def main() -> int:
         subprocess.run(
             ["docker", "pull", image],
             check=True,
+            timeout=300,
         )
     except FileNotFoundError:
         print("Docker not found. Install Docker and ensure 'docker' is on PATH.", file=sys.stderr)
         return 1
     except subprocess.CalledProcessError as e:
         print(f"docker pull failed: {e}", file=sys.stderr)
+        return 1
+    except subprocess.TimeoutExpired:
+        print(f"docker pull timed out after 300s: {image}", file=sys.stderr)
         return 1
     print(f"Pulled {image}")
     return 0

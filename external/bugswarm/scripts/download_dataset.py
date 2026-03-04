@@ -26,7 +26,7 @@ import sys
 from pathlib import Path
 import base64
 from urllib.error import HTTPError
-from urllib.parse import quote, urljoin
+from urllib.parse import quote, urljoin, urlparse
 from urllib.request import Request, urlopen
 
 # BugSwarm REST API (Eve-style: paginated with _items and _links.next). Filter uses MongoDB-style JSON.
@@ -44,6 +44,9 @@ def fetch_artifacts_limited_pages(
     api_filter: str | None = None,
 ) -> list[dict] | None:
     """Fetch up to the first max_pages pages of artifacts from the API. Returns list of raw artifact dicts or None on error."""
+    base_parsed = urlparse(BUGSWARM_ARTIFACTS_BASE)
+    allowed_scheme = base_parsed.scheme
+    allowed_netloc = base_parsed.netloc
     filter_str = api_filter or ARTIFACTS_FILTER
     results = []
     url = f"{BUGSWARM_ARTIFACTS_BASE}/v1/artifacts?where={quote(filter_str)}"
@@ -73,7 +76,12 @@ def fetch_artifacts_limited_pages(
             break
         try:
             next_href = data["_links"]["next"]["href"]
-            url = urljoin(url, next_href)
+            next_url = urljoin(url, next_href)
+            parsed = urlparse(next_url)
+            if parsed.scheme not in ("http", "https") or parsed.netloc != allowed_netloc:
+                print(f"Pagination link points off-host (scheme={parsed.scheme!r}, netloc={parsed.netloc!r}); stopping.", file=sys.stderr)
+                break
+            url = next_url
         except (KeyError, TypeError):
             break
 
@@ -124,6 +132,9 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    if args.max_pages is not None and args.max_pages <= 0:
+        parser.error("--max-pages must be a positive integer (N >= 1)")
+
     script_dir = Path(__file__).resolve().parent
     bugswarm_root = script_dir.parent
     default_output = bugswarm_root / "data" / "cpp_artifacts.json"
@@ -132,8 +143,13 @@ def main() -> int:
 
     api = None
     if args.input_json is not None:
-        # Reproducible run from fixture (no API)
-        path = args.input_json if args.input_json.is_absolute() else (script_dir / args.input_json)
+        # Reproducible run from fixture (no API); resolve relative paths: cwd first, then script_dir.
+        if args.input_json.is_absolute():
+            path = args.input_json
+        else:
+            path = Path.cwd() / args.input_json
+            if not path.exists():
+                path = script_dir / args.input_json
         if not path.exists():
             print(f"Input file not found: {path}", file=sys.stderr)
             return 1

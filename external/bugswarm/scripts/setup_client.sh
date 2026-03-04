@@ -5,5 +5,5 @@
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR/.."
-pip install -q -r scripts/requirements.txt
+python3 -m pip install -q -r scripts/requirements.txt
 python3 scripts/download_dataset.py --include-build-system

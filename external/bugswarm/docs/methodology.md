@@ -41,7 +41,7 @@ This document answers the research questions for using BugSwarm as a C/C++ CI be
 
 - The public dataset is **focused on Java and Python**; the dataset site lists only Python and Java. C/C++ may be present in the database if any mined projects used `lang: cpp` or similar in Travis or were classified as C/C++ by GitHub.
 - We do not assume a minimum count. We run `download_dataset.py` (with optional `--include-build-system` to add CMake/Makefile artifacts) and record whatever count we get in `data/cpp_artifacts.json`. The methodology and tooling support 50+ artifacts when available.
-- **CI systems:** Artifacts have a `ci_service` field: `"travis"` or `"github"` (GitHub Actions). Mining was originally from Travis-CI; newer artifacts may be from GitHub Actions.
+- **CI systems:** Artifacts have a `ci_service` field: `"travis"` or `"GitHub"` (GitHub Actions). Mining was originally from Travis-CI; newer artifacts may be from GitHub Actions.
 
 ### What is the structure of an artifact and its Docker image?
 
@@ -96,5 +96,5 @@ This document answers the research questions for using BugSwarm as a C/C++ CI be
 | Reproduce failure? | docker run image bash /usr/local/bin/run_failed.sh (or reproduce_ci.py --job fail) |
 | Fail vs pass job? | fail = first job (failed build/tests); pass = next job that passed after fix |
 | C/C++ count? | Dataset is Java/Python-focused; we catalog whatever C/C++ (and optional CMake) artifacts exist |
-| CI systems? | travis, github (GitHub Actions) |
+| CI systems? | travis, GitHub (GitHub Actions) |
 | Boost/Clang replication? | Same pattern: curated pairs, Docker (or env) with run_fail/run_pass, catalog, evaluate by re-running after agent fix |

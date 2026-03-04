@@ -32,6 +32,8 @@ def main() -> int:
                             errors.append(f"artifacts[{i}] missing '{key}'")
         except json.JSONDecodeError as e:
             errors.append(f"Invalid JSON: {e}")
+        except OSError as e:
+            errors.append(f"Failed to read {data_file}: {e}")
 
     # 2. Scripts run without crash (help)
     for name, argv in [
