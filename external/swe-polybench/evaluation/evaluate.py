@@ -116,8 +116,18 @@ def main() -> int:
     except json.JSONDecodeError as e:
         print(f"Invalid JSON in predictions file {args.predictions_path!r}: {e}", file=sys.stderr)
         return 1
-    if not all("instance_id" in p and "model_patch" in p for p in preds):
-        print("Predictions must have instance_id and model_patch (or patch) per line", file=sys.stderr)
+    def _valid_pred(p):
+        return (
+            isinstance(p, dict)
+            and p.get("instance_id")
+            and (p.get("model_patch") or p.get("patch"))
+        )
+
+    if not all(_valid_pred(p) for p in preds):
+        print(
+            "Predictions must have non-empty instance_id and non-empty model_patch (or patch) per line",
+            file=sys.stderr,
+        )
         return 1
     summary = {
         "num_predictions": len(preds),

@@ -117,12 +117,12 @@ def main() -> int:
         with open(path_500, "w", encoding="utf-8") as f:
             for r in records:
                 f.write(json.dumps(r, ensure_ascii=False) + "\n")
-    except Exception as e:
+    except OSError as e:
         print(
             f"Failed to write {path_500} ({len(records)} records): {e}",
             file=sys.stderr,
         )
-        sys.exit(1)
+        return 1
     print(f"Wrote {path_500} ({len(records)} instances).", file=sys.stderr)
     return 0
 
