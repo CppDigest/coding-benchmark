@@ -74,6 +74,9 @@ def main() -> int:
             subprocess.run(cmd, cwd=str(repo_dir), check=True)
         except subprocess.CalledProcessError as e:
             return e.returncode
+        except OSError as e:
+            print(f"Failed to start official evaluator: {e}", file=sys.stderr)
+            return 1
         # Official script writes result.json under args.result_path
         result_file = args.result_path / "result.json"
         if not result_file.exists():
