@@ -39,7 +39,7 @@ def load_cpp_issues(data_path: str) -> dict[str, dict]:
                 sys.exit(1)
             if instance_id in issues:
                 print(
-                    f\"Error: duplicate instance_id {instance_id!r} in cpp_issues file {data_path} at line {lineno}\",
+                    f"Error: duplicate instance_id {instance_id!r} in cpp_issues file {data_path} at line {lineno}",
                     file=sys.stderr,
                 )
                 sys.exit(1)
@@ -85,8 +85,14 @@ def run_standalone_evaluation(
     # Deduplicate predictions by instance_id so each instance is evaluated once.
     # If multiple rows share the same instance_id, the last occurrence wins.
     pred_map: dict[str, dict] = {}
-    for p in preds:
+    for idx, p in enumerate(preds):
         iid = p.get("instance_id")
+        if not iid:
+            print(
+                f"Warning: skipping prediction at index {idx} with missing/empty instance_id",
+                file=sys.stderr,
+            )
+            continue
         pred_map[iid] = p
 
     instance_results = []
