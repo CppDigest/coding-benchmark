@@ -1,0 +1,4 @@
+# For download.py (Child Issue 1 — dataset acquisition)
+datasets>=2.14.0
+huggingface_hub>=0.16.0
+pyarrow>=12.0.0
