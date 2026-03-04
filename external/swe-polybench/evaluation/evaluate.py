@@ -74,8 +74,8 @@ def main() -> int:
             subprocess.run(cmd, cwd=str(repo_dir), check=True)
         except subprocess.CalledProcessError as e:
             return e.returncode
-        # Official script writes result.json and prints pass rate
-        result_file = repo_dir / "result.json"
+        # Official script writes result.json under args.result_path
+        result_file = args.result_path / "result.json"
         summary = {}
         if result_file.exists():
             try:
