@@ -2,7 +2,7 @@
 
 This document covers (A) how Defects4C is built and used, (B) how to run our wrappers and Docker, and (C) a replication plan for Boost and Clang.
 
----
+----
 
 ## Research questions answered (Child Issue 2)
 
